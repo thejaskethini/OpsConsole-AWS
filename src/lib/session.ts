@@ -44,7 +44,7 @@ export function verifySession(token: string | undefined): boolean {
   }
   // Check expiry
   const age = Date.now() - parseInt(ts, 10);
-  return age > 0 && age < COOKIE_MAX_AGE * 1000;
+  return age >= 0 && age < COOKIE_MAX_AGE * 1000;
 }
 
 /** Build the Set-Cookie header string for setting the session cookie. */

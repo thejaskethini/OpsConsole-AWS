@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   getEc2Client, getRdsClient, getEcsClient, getElbClient,
-  getCloudWatchClient, getCostExplorerClient,
+  getCloudWatchClient, getCostExplorerClient, hasAwsCredentials,
 } from "@/lib/aws-clients";
+import { mockOverviewMetricsPayload } from "@/modules/cloud/mock-data";
+import { logger } from "@/lib/logger";
 import {
   DescribeInstancesCommand, DescribeVolumesCommand,
   DescribeAddressesCommand, DescribeSecurityGroupsCommand,
@@ -19,19 +21,6 @@ import {
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 import { GetCostAndUsageCommand } from "@aws-sdk/client-cost-explorer";
-
-// ── Degraded-source tracking ──────────────────────────────────────────────
-const degradedSources: string[] = [];
-
-async function safeAwsCall<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await fn();
-  } catch (e) {
-    console.warn(`[overview-metrics] AWS call failed (${label}):`, e);
-    if (!degradedSources.includes(label)) degradedSources.push(label);
-    return fallback;
-  }
-}
 
 // ── CloudWatch helpers ────────────────────────────────────────────────────
 
@@ -65,7 +54,7 @@ async function getCwSum(
       Namespace: ns, MetricName: metric, Dimensions: dims,
       StartTime: start, EndTime: end, Period: hours * 3600, Statistics: ["Sum"],
     }));
-    return res.Datapoints?.[0]?.Sum ?? 0;
+    return res.Datapoints?.reduce((acc, dp) => acc + (dp.Sum || 0), 0) ?? 0;
   } catch { return 0; }
 }
 
@@ -98,10 +87,29 @@ async function paginateEc2Instances(ec2: ReturnType<typeof getEc2Client>): Promi
 // ── Main handler ──────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
-  degradedSources.length = 0;
-
   const { searchParams } = new URL(request.url);
-  const region = searchParams.get("region") || undefined;
+  const region = searchParams.get("region") || process.env.AWS_DEFAULT_REGION || "ap-south-1";
+
+  // If running offline / local dev without AWS credentials, return deterministic demo data
+  if (!hasAwsCredentials()) {
+    return NextResponse.json({
+      ...mockOverviewMetricsPayload,
+      region,
+    });
+  }
+
+  // Request-scoped degraded source tracking (prevents cross-request leaks)
+  const degradedSources: string[] = [];
+
+  async function safeAwsCall<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await fn();
+    } catch (e) {
+      logger.warn(`Overview metrics call failed (${label})`, { error: String(e) });
+      if (!degradedSources.includes(label)) degradedSources.push(label);
+      return fallback;
+    }
+  }
 
   const ec2 = getEc2Client(region);
   const rds = getRdsClient(region);

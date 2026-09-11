@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
-import {
-  CloudFrontClient,
-  ListDistributionsCommand,
-} from "@aws-sdk/client-cloudfront";
+import { ListDistributionsCommand } from "@aws-sdk/client-cloudfront";
+import { getCloudFrontClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockCloudFrontDistributions } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
-    // CloudFront is always us-east-1 regardless of region
-    const cf = new CloudFrontClient({ region: "us-east-1" });
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      return NextResponse.json(mockCloudFrontDistributions);
+    }
+
+    // CloudFront is a global service pinned to us-east-1
+    const cf = getCloudFrontClient();
 
     const distributions: Record<string, unknown>[] = [];
     let marker: string | undefined;
@@ -33,7 +39,7 @@ export async function GET() {
 
     return NextResponse.json(distributions);
   } catch (error: unknown) {
-    console.error("CloudFront API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch CloudFront data" }, { status: 500 });
+    logger.error("CloudFront API Error", error);
+    return handleAwsError(error, "Failed to fetch CloudFront data");
   }
 }

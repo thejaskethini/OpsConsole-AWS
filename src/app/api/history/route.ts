@@ -1,20 +1,9 @@
 import { NextResponse } from "next/server";
-import { CloudTrailClient, LookupEventsCommand } from "@aws-sdk/client-cloudtrail";
-
-function getCloudTrailClient(region?: string): CloudTrailClient {
-  return new CloudTrailClient({
-    region: region || process.env.AWS_DEFAULT_REGION || "ap-south-1",
-    credentials: process.env.AWS_ACCESS_KEY_ID
-      ? {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!.trim(),
-          ...(process.env.AWS_SESSION_TOKEN
-            ? { sessionToken: process.env.AWS_SESSION_TOKEN.trim() }
-            : {}),
-        }
-      : undefined, // Falls back to IAM role / instance profile
-  });
-}
+import { LookupEventsCommand } from "@aws-sdk/client-cloudtrail";
+import { getCloudTrailClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockFailureHistory } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 // Map AWS API events to user-friendly reasons and recovery steps
 const recoveryMap: Record<string, { reason: string; severity: "critical" | "warning" | "info"; recovery: string[] }> = {
@@ -69,6 +58,23 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const region = searchParams.get("region") || process.env.AWS_DEFAULT_REGION || "ap-south-1";
+
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      const history = mockFailureHistory.map((e) => ({
+        timestamp: e.eventTime,
+        eventName: e.eventName,
+        resourceId: e.resourceName,
+        resourceType: e.resourceType,
+        username: e.username,
+        sourceIp: "127.0.0.1",
+        severity: e.severity,
+        reason: e.reason,
+        recoverySteps: e.recovery,
+        hasError: false,
+      }));
+      return NextResponse.json({ history });
+    }
 
     const ct = getCloudTrailClient(region);
 

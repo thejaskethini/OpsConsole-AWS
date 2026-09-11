@@ -1,16 +1,32 @@
 import { NextResponse } from "next/server";
-import {
-  SageMakerClient,
-  ListEndpointsCommand,
-  ListNotebookInstancesCommand,
-} from "@aws-sdk/client-sagemaker";
+import { ListEndpointsCommand, ListNotebookInstancesCommand } from "@aws-sdk/client-sagemaker";
+import { getSageMakerClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockSageMakerData } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const region = searchParams.get("region") || process.env.AWS_DEFAULT_REGION || "ap-south-1";
+    const region = searchParams.get("region") || undefined;
 
-    const sm = new SageMakerClient({ region });
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      return NextResponse.json({
+        endpoints: mockSageMakerData.endpoints,
+        notebooks: [
+          {
+            NotebookInstanceName: "data-science-exploration-env",
+            NotebookInstanceStatus: "InService",
+            InstanceType: "ml.t3.medium",
+            CreationTime: "2026-01-10T00:00:00.000Z",
+            LastModifiedTime: "2026-03-01T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+
+    const sm = getSageMakerClient(region);
 
     // Paginate endpoints
     const endpoints: Record<string, unknown>[] = [];
@@ -47,7 +63,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ endpoints, notebooks });
   } catch (error: unknown) {
-    console.error("SageMaker API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch SageMaker data" }, { status: 500 });
+    logger.error("SageMaker API Error", error);
+    return handleAwsError(error, "Failed to fetch SageMaker data");
   }
 }

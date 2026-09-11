@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
-import {
-  CodePipelineClient,
-  ListPipelinesCommand,
-  GetPipelineStateCommand,
-} from "@aws-sdk/client-codepipeline";
+import { ListPipelinesCommand, GetPipelineStateCommand } from "@aws-sdk/client-codepipeline";
+import { getCodePipelineClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockCodePipelines } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const region = searchParams.get("region") || process.env.AWS_DEFAULT_REGION || "ap-south-1";
+    const region = searchParams.get("region") || undefined;
 
-    const cp = new CodePipelineClient({ region });
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      return NextResponse.json(mockCodePipelines);
+    }
+
+    const cp = getCodePipelineClient(region);
     const pipelines: Record<string, unknown>[] = [];
 
     let nextToken: string | undefined;
@@ -23,7 +28,6 @@ export async function GET(request: Request) {
         items.map(async (p) => {
           try {
             const state = await cp.send(new GetPipelineStateCommand({ name: p.name! }));
-            // Get the most recent action state for last-execution time
             const stageState = state.stageStates?.[0];
             const latest = stageState?.latestExecution;
             const lastActionTime = stageState?.actionStates?.[0]?.latestExecution?.lastStatusChange;
@@ -45,7 +49,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(pipelines);
   } catch (error: unknown) {
-    console.error("CodePipeline API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch CodePipeline data" }, { status: 500 });
+    logger.error("CodePipeline API Error", error);
+    return handleAwsError(error, "Failed to fetch CodePipeline data");
   }
 }

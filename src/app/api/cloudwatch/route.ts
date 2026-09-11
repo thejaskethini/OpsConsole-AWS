@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
-import {
-  CloudWatchClient,
-  DescribeAlarmsCommand,
-} from "@aws-sdk/client-cloudwatch";
+import { DescribeAlarmsCommand } from "@aws-sdk/client-cloudwatch";
+import { getCloudWatchClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockCloudWatchAlarms } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const region = searchParams.get("region") || process.env.AWS_DEFAULT_REGION || "ap-south-1";
+    const region = searchParams.get("region") || undefined;
 
-    const cw = new CloudWatchClient({ region });
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      const alarms = mockCloudWatchAlarms.map((a) => ({
+        AlarmName: a.AlarmName,
+        AlarmDescription: "Monitored production threshold alarm",
+        StateValue: a.StateValue,
+        Namespace: a.Namespace || "AWS/EC2",
+        MetricName: a.MetricName || "CPUUtilization",
+        ComparisonOperator: "GreaterThanThreshold",
+        Threshold: a.Threshold || 80,
+        Period: 300,
+        EvaluationPeriods: 2,
+        StateUpdatedTimestamp: "2026-03-10T12:00:00.000Z",
+      }));
+      return NextResponse.json(alarms);
+    }
+
+    const cw = getCloudWatchClient(region);
     const alarms: Record<string, unknown>[] = [];
     let nextToken: string | undefined;
 
@@ -34,7 +52,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(alarms);
   } catch (error: unknown) {
-    console.error("CloudWatch API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch CloudWatch data" }, { status: 500 });
+    logger.error("CloudWatch API Error", error);
+    return handleAwsError(error, "Failed to fetch CloudWatch data");
   }
 }

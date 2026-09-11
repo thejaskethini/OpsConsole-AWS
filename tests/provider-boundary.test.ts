@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { MockCloudProvider } from "../src/modules/cloud/mock-provider.ts";
-import { getCloudProvider } from "../src/modules/cloud/index.ts";
-import { hasAwsCredentials } from "../src/lib/aws-clients.ts";
+import { MockCloudProvider } from "../src/modules/cloud/mock-provider";
+import { getCloudProvider } from "../src/modules/cloud";
+import { hasAwsCredentials } from "../src/lib/aws-clients";
 
 describe("Cloud Provider Boundary & Mock Offline Tests", () => {
   const provider = new MockCloudProvider();
@@ -47,7 +47,7 @@ describe("Cloud Provider Boundary & Mock Offline Tests", () => {
   });
 
   it("provides deterministic S3 buckets offline", async () => {
-    const buckets = await provider.getS3Buckets();
+    const buckets = await provider.getS3Buckets("us-east-1");
     assert.ok(Array.isArray(buckets));
     assert.ok(buckets.length > 0);
     assert.ok(buckets[0].Name);

@@ -6,7 +6,7 @@ import {
   buildSetCookieHeader,
   buildClearCookieHeader,
   COOKIE_NAME,
-} from "../src/lib/session.ts";
+} from "../src/lib/session";
 
 describe("Session HMAC and Cookie Tests", () => {
   it("generates a valid signed session token", () => {

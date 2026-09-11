@@ -6,7 +6,7 @@ import {
   formatPercent,
   formatDate,
   formatDateTime,
-} from "../src/lib/formatters.ts";
+} from "../src/lib/formatters";
 
 describe("Formatters Unit Tests", () => {
   describe("formatBytes", () => {

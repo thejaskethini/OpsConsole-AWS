@@ -11,10 +11,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { LocalIdentityRepository, DEFAULT_USER_ID } from "../src/modules/identity/local-store.ts";
-import { hasPermission, getPermissionsForRole, getRoleById, ALL_ROLES, ALL_PERMISSIONS } from "../src/modules/identity/permissions.ts";
-import { can, requirePermission, requireMembership, getRoleForMember, AuthorizationError } from "../src/modules/identity/authorization.ts";
-import { getIdentityRepository } from "../src/modules/identity/index.ts";
+import { LocalIdentityRepository, DEFAULT_USER_ID } from "../src/modules/identity/local-store";
+import { hasPermission, getPermissionsForRole, getRoleById, ALL_ROLES, ALL_PERMISSIONS } from "../src/modules/identity/permissions";
+import { can, requirePermission, requireMembership, getRoleForMember, AuthorizationError } from "../src/modules/identity/authorization";
+import { getIdentityRepository } from "../src/modules/identity";
 
 // ─── Test Fixtures ────────────────────────────────────────────────────────────
 

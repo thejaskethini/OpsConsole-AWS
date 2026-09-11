@@ -1,16 +1,31 @@
 import { NextResponse } from "next/server";
-import {
-  DynamoDBClient,
-  ListTablesCommand,
-  DescribeTableCommand,
-} from "@aws-sdk/client-dynamodb";
+import { getDynamoDBClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { ListTablesCommand, DescribeTableCommand } from "@aws-sdk/client-dynamodb";
+import { mockDynamoDBTables } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const region = searchParams.get("region") || process.env.AWS_DEFAULT_REGION || "ap-south-1";
+    const region = searchParams.get("region") || undefined;
 
-    const dynamo = new DynamoDBClient({ region });
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      const results = mockDynamoDBTables.map((t) => ({
+        TableName: t.TableName,
+        Status: t.TableStatus,
+        ItemCount: t.ItemCount,
+        SizeBytes: t.TableSizeBytes,
+        BillingMode: t.BillingMode,
+        ReadCapacity: 5,
+        WriteCapacity: 5,
+        Replicas: 0,
+      }));
+      return NextResponse.json(results);
+    }
+
+    const dynamo = getDynamoDBClient(region);
     const tables: Record<string, unknown>[] = [];
 
     // Paginate table names
@@ -46,7 +61,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(tables.sort((a, b) => String(a.TableName).localeCompare(String(b.TableName))));
   } catch (error: unknown) {
-    console.error("DynamoDB API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch DynamoDB data" }, { status: 500 });
+    logger.error("DynamoDB API Error", error);
+    return handleAwsError(error, "Failed to fetch DynamoDB data");
   }
 }

@@ -1,34 +1,38 @@
 import { NextResponse } from "next/server";
-import { EC2Client, DescribeInstancesCommand, DescribeVpcsCommand } from "@aws-sdk/client-ec2";
-import { RDSClient, DescribeDBInstancesCommand } from "@aws-sdk/client-rds";
-import { ECSClient, ListClustersCommand, DescribeClustersCommand, ListServicesCommand, DescribeServicesCommand } from "@aws-sdk/client-ecs";
-import { ElasticLoadBalancingV2Client, DescribeLoadBalancersCommand, DescribeTargetGroupsCommand, DescribeTargetHealthCommand } from "@aws-sdk/client-elastic-load-balancing-v2";
-import { ElastiCacheClient, DescribeCacheClustersCommand } from "@aws-sdk/client-elasticache";
-
-function getCreds() {
-  if (!process.env.AWS_ACCESS_KEY_ID) return undefined;
-  return {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!.trim(),
-    sessionToken: process.env.AWS_SESSION_TOKEN?.trim(),
-  };
-}
-function getRegion(r?: string | null) { return r || process.env.AWS_DEFAULT_REGION || "ap-south-1"; }
+import { DescribeInstancesCommand, DescribeVpcsCommand } from "@aws-sdk/client-ec2";
+import { DescribeDBInstancesCommand } from "@aws-sdk/client-rds";
+import { ListClustersCommand, DescribeClustersCommand, ListServicesCommand, DescribeServicesCommand } from "@aws-sdk/client-ecs";
+import { DescribeLoadBalancersCommand, DescribeTargetGroupsCommand, DescribeTargetHealthCommand } from "@aws-sdk/client-elastic-load-balancing-v2";
+import { DescribeCacheClustersCommand } from "@aws-sdk/client-elasticache";
+import {
+  getEc2Client,
+  getRdsClient,
+  getEcsClient,
+  getElbClient,
+  getElastiCacheClient,
+  hasAwsCredentials,
+} from "@/lib/aws-clients";
+import { mockTopology } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 interface FlowNode { id: string; type: string; label: string; subLabel: string; status: string; vpcId?: string; [k: string]: unknown; }
 interface FlowEdge { id: string; source: string; target: string; label?: string; }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const region = getRegion(searchParams.get("region"));
-  const creds = getCreds();
-  const cfg = { region, credentials: creds };
+  const region = searchParams.get("region") || undefined;
 
-  const ec2 = new EC2Client(cfg);
-  const rds = new RDSClient(cfg);
-  const ecs = new ECSClient(cfg);
-  const albClient = new ElasticLoadBalancingV2Client(cfg);
-  const elasticache = new ElastiCacheClient(cfg);
+  // Offline / Local Development Fallback
+  if (!hasAwsCredentials()) {
+    return NextResponse.json(mockTopology);
+  }
+
+  const ec2 = getEc2Client(region);
+  const rds = getRdsClient(region);
+  const ecs = getEcsClient(region);
+  const albClient = getElbClient(region);
+  const elasticache = getElastiCacheClient(region);
 
   const nodes: FlowNode[] = [];
   const edges: FlowEdge[] = [];

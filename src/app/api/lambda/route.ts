@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
-import { getLambdaClient, getCloudWatchClient } from "@/lib/aws-clients";
+import { getLambdaClient, getCloudWatchClient, hasAwsCredentials } from "@/lib/aws-clients";
 import { ListFunctionsCommand } from "@aws-sdk/client-lambda";
 import { GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
+import { mockLambdaFunctions } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const region = searchParams.get("region") || undefined;
+
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      return NextResponse.json(mockLambdaFunctions);
+    }
 
     const lambda = getLambdaClient(region);
     const cw = getCloudWatchClient(region);
@@ -23,7 +31,7 @@ export async function GET(request: Request) {
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - 15 * 24 * 60 * 60 * 1000);
 
-    // Fetch CloudWatch metrics for each function (in batches to avoid throttling)
+    // Fetch CloudWatch metrics for each function
     const results = await Promise.all(
       functions.map(async (fn) => {
         const dims = [{ Name: "FunctionName", Value: fn.FunctionName! }];
@@ -53,7 +61,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(results);
   } catch (error: unknown) {
-    console.error("Lambda API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch Lambda data" }, { status: 500 });
+    logger.error("Lambda API Error", error);
+    return handleAwsError(error, "Failed to fetch Lambda data");
   }
 }

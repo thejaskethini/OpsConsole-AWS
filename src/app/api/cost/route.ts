@@ -1,10 +1,32 @@
 import { NextResponse } from "next/server";
 import { GetCostAndUsageCommand, GetCostAndUsageCommandOutput, GetCostAndUsageWithResourcesCommand } from "@aws-sdk/client-cost-explorer";
-import { getCostExplorerClient } from "@/lib/aws-clients";
+import { getCostExplorerClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockCostData } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      return NextResponse.json({
+        overall: mockCostData.daily,
+        stats: {
+          ...mockCostData.stats,
+          startDate: "2026-03-01",
+          endDate: "2026-03-10",
+          currentMonthTotal: mockCostData.stats.totalSpend,
+          currentMonthDays: 10,
+          currentMonthLabel: "March 2026",
+        },
+        services: mockCostData.topServices.map((s) => s.service),
+        serviceData: mockCostData.topServices,
+        rdsBreakdown: mockCostData.rdsBreakdown,
+        availableMonths: ["2026-03", "2026-02", "2026-01"],
+      });
+    }
 
     const now = new Date();
     // today at UTC midnight (exclusive end for Cost Explorer)

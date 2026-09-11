@@ -6,10 +6,14 @@ import {
   LayoutDashboard, DollarSign, Database, Container, Server,
   ArrowRightLeft, Box, Zap, Shield, Trash2, Network, TrendingDown,
   Clock, ChevronRight, ChevronDown, Globe, Lock, Eye, EyeOff,
-  Loader2, LogOut, GitBranch, Cpu, Radio, HardDrive, Layers,
-  Wifi, BarChart2, FlaskConical,
+  Loader2, GitBranch, Cpu, Radio, HardDrive, Layers,
+  Wifi, BarChart2, FlaskConical, Users, Settings, Building2,
 } from "lucide-react";
 import { RegionProvider, useRegion } from "@/components/RegionProvider";
+import { IdentityProvider } from "@/components/identity/IdentityProvider";
+import { WorkspaceSwitcher } from "@/components/identity/WorkspaceSwitcher";
+import { EnvironmentSwitcher } from "@/components/identity/EnvironmentSwitcher";
+import { UserMenu } from "@/components/identity/UserMenu";
 
 const navItems = [
   // ── Dashboard ──────────────────────────────────────
@@ -40,6 +44,10 @@ const navItems = [
   { href: "/security",       icon: Shield,           label: "Security",          group: "ops" },
   { href: "/waste",          icon: Trash2,           label: "Waste",             group: "ops" },
   { href: "/sagemaker",      icon: FlaskConical,     label: "SageMaker",         group: "ops" },
+  // ── Platform ──────────────────────────────────────
+  { href: "/workspace",      icon: Building2,        label: "Workspace",         group: "platform" },
+  { href: "/members",        icon: Users,            label: "Members",           group: "platform" },
+  { href: "/settings",       icon: Settings,         label: "Settings",          group: "platform" },
 ];
 
 const navGroups: { key: string; label: string }[] = [
@@ -49,6 +57,7 @@ const navGroups: { key: string; label: string }[] = [
   { key: "networking", label: "Networking" },
   { key: "devtools",   label: "Developer Tools" },
   { key: "ops",        label: "Operations" },
+  { key: "platform",   label: "Platform" },
 ];
 
 /* ── Region Selector ─────────────────────────────────────────────── */
@@ -244,87 +253,84 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) return <AuthOverlay onAuthenticated={() => setIsAuthenticated(true)} />;
 
   return (
-    <>
-      {/* ── Sidebar — FIXED so it never scrolls with the page ─────── */}
-      <aside className="fixed top-0 left-0 h-screen w-[250px] flex flex-col border-r border-white/[0.04] bg-[#030711]/98 backdrop-blur-2xl z-50">
-        {/* Brand */}
-        <div className="px-5 py-5 border-b border-white/[0.04] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 flex items-center justify-center shadow-xl shadow-cyan-500/20">
-              <LayoutDashboard size={18} className="text-white drop-shadow" />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-[14px] leading-none tracking-tight">OpsConsole</p>
-              <p className="text-[10px] text-cyan-400/60 mt-1 font-medium tracking-wide">CLOUD · AWS</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Region Selector */}
-        <div className="px-3 py-3 border-b border-white/[0.04] shrink-0">
-          <RegionSelector />
-        </div>
-
-        {/* Navigation — scrollable independently */}
-        <nav className="flex-1 px-2.5 py-4 flex flex-col gap-0.5 overflow-y-auto min-h-0">
-          {navGroups.map((group, gi) => {
-            const items = navItems.filter(n => n.group === group.key);
-            if (items.length === 0) return null;
-            return (
-              <div key={group.key}>
-                {gi > 0 && <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent my-2" />}
-                <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-600 px-3 mb-1.5">{group.label}</p>
-                {items.map(n => <NavLink key={n.href} {...n} />)}
+    <IdentityProvider>
+      <>
+        {/* ── Sidebar — FIXED ───────────────────────────────────── */}
+        <aside className="fixed top-0 left-0 h-screen w-[250px] flex flex-col border-r border-white/[0.04] bg-[#030711]/98 backdrop-blur-2xl z-50">
+          {/* Brand */}
+          <div className="px-5 py-4 border-b border-white/[0.04] shrink-0">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-[12px] bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 flex items-center justify-center shadow-xl shadow-cyan-500/20 shrink-0">
+                <LayoutDashboard size={16} className="text-white drop-shadow" />
               </div>
-            );
-          })}
-        </nav>
-
-        {/* Footer */}
-        <div className="px-4 py-4 border-t border-white/[0.04] space-y-2 shrink-0">
-          <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-            </span>
-            <span className="text-[10px] text-emerald-400/80 font-medium">Read-only · {region}</span>
-          </div>
-          <button
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
-              window.location.reload();
-            }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] text-slate-600 hover:text-rose-400 hover:bg-rose-500/[0.06] transition-all cursor-pointer"
-          >
-            <LogOut size={11} />
-            <span>Sign out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main — offset by sidebar width, fills full height ────── */}
-      <div className="ml-[250px] flex flex-col h-screen w-[calc(100vw-250px)]">
-        {/* Top bar */}
-        <header className="h-[52px] shrink-0 border-b border-white/[0.04] bg-[#030711]/80 backdrop-blur-2xl flex items-center px-6 justify-between sticky top-0 z-40">
-          <div className="flex items-center gap-3">
-            <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/50" />
-            <p className="text-[13px] text-slate-400 font-medium">AWS Cloud Observability</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500/15 to-cyan-500/15 border border-emerald-500/20">
-              <span className="text-[10px] font-bold text-emerald-400 tracking-widest uppercase">Live</span>
+              <div>
+                <p className="text-white font-semibold text-[14px] leading-none tracking-tight">OpsConsole</p>
+                <p className="text-[9px] text-slate-600 mt-0.5 font-medium tracking-wide">SRE PLATFORM</p>
+              </div>
             </div>
-            <span className="text-[11px] text-slate-600 font-mono-brand">
-              {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-            </span>
+            {/* Workspace switcher in sidebar brand area */}
+            <WorkspaceSwitcher />
           </div>
-        </header>
 
-        {/* Content — this is the ONLY scroll area */}
-        <main className="flex-1 p-6 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </>
+          {/* Region + Environment selectors */}
+          <div className="px-3 py-2.5 border-b border-white/[0.04] shrink-0 flex flex-col gap-2">
+            <RegionSelector />
+            <EnvironmentSwitcher />
+          </div>
+
+          {/* Navigation — scrollable independently */}
+          <nav className="flex-1 px-2.5 py-4 flex flex-col gap-0.5 overflow-y-auto min-h-0">
+            {navGroups.map((group, gi) => {
+              const items = navItems.filter(n => n.group === group.key);
+              if (items.length === 0) return null;
+              return (
+                <div key={group.key}>
+                  {gi > 0 && <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent my-2" />}
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-600 px-3 mb-1.5">{group.label}</p>
+                  {items.map(n => <NavLink key={n.href} {...n} />)}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Footer — status indicator */}
+          <div className="px-4 py-3 border-t border-white/[0.04] shrink-0">
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+              </span>
+              <span className="text-[10px] text-emerald-400/80 font-medium">Read-only · {region}</span>
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main ──────────────────────────────────────────────── */}
+        <div className="ml-[250px] flex flex-col h-screen w-[calc(100vw-250px)]">
+          {/* Top bar */}
+          <header className="h-[52px] shrink-0 border-b border-white/[0.04] bg-[#030711]/80 backdrop-blur-2xl flex items-center px-5 justify-between sticky top-0 z-40">
+            <div className="flex items-center gap-3">
+              <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/50" />
+              <p className="text-[12px] text-slate-500 font-medium">Cloud Observability Platform</p>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500/15 to-cyan-500/15 border border-emerald-500/20">
+                <span className="text-[9.5px] font-bold text-emerald-400 tracking-widest uppercase">Live</span>
+              </div>
+              <span className="text-[10px] text-slate-600 font-mono hidden md:block">
+                {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+              </span>
+              {/* User menu in top bar */}
+              <UserMenu />
+            </div>
+          </header>
+
+          {/* Content */}
+          <main className="flex-1 p-6 overflow-y-auto">
+            {children}
+          </main>
+        </div>
+      </>
+    </IdentityProvider>
   );
 }

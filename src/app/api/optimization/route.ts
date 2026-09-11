@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
-import { EC2Client, DescribeInstancesCommand, DescribeVolumesCommand, DescribeAddressesCommand } from "@aws-sdk/client-ec2";
-import { RDSClient, DescribeDBInstancesCommand } from "@aws-sdk/client-rds";
-import { ECSClient, ListClustersCommand, ListServicesCommand, DescribeServicesCommand } from "@aws-sdk/client-ecs";
-import { S3Client, ListBucketsCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
+import {
+  getEc2Client,
+  getRdsClient,
+  getEcsClient,
+  getS3Client,
+  getCloudWatchClient,
+  getElbClient,
+  hasAwsCredentials,
+} from "@/lib/aws-clients";
+import { DescribeInstancesCommand, DescribeVolumesCommand, DescribeAddressesCommand } from "@aws-sdk/client-ec2";
+import { DescribeDBInstancesCommand } from "@aws-sdk/client-rds";
+import { ListClustersCommand, ListServicesCommand, DescribeServicesCommand } from "@aws-sdk/client-ecs";
+import { ListBucketsCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
 import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
-import { ElasticLoadBalancingV2Client, DescribeTargetGroupsCommand, DescribeTargetHealthCommand } from "@aws-sdk/client-elastic-load-balancing-v2";
-
-function getCreds() {
-  if (!process.env.AWS_ACCESS_KEY_ID) return undefined;
-  return {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!.trim(),
-    sessionToken: process.env.AWS_SESSION_TOKEN?.trim(),
-  };
-}
-
-function getRegion(r?: string | null) { return r || process.env.AWS_DEFAULT_REGION || "ap-south-1"; }
+import { DescribeTargetGroupsCommand, DescribeTargetHealthCommand } from "@aws-sdk/client-elastic-load-balancing-v2";
+import { mockOptimizationFindings } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 interface Finding {
   id: string;
@@ -43,17 +44,33 @@ async function getCwAvg(cw: CloudWatchClient, namespace: string, metric: string,
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const region = getRegion(searchParams.get("region"));
-  const creds = getCreds();
-  const cfg = { region, credentials: creds };
-  const cfgGlobal = { region: "us-east-1", credentials: creds };
+  const region = searchParams.get("region") || undefined;
 
-  const ec2 = new EC2Client(cfg);
-  const rds = new RDSClient(cfg);
-  const ecs = new ECSClient(cfg);
-  const s3 = new S3Client(cfgGlobal);
-  const cw = new CloudWatchClient(cfg);
-  const alb = new ElasticLoadBalancingV2Client(cfg);
+  // Offline / Local Development Fallback
+  if (!hasAwsCredentials()) {
+    const totalSavings = mockOptimizationFindings.reduce((s, f) => s + (f.estimatedMonthlySavings || 0), 0);
+    const bySeverity = {
+      critical: mockOptimizationFindings.filter((f) => f.severity === "critical").length,
+      warning: mockOptimizationFindings.filter((f) => f.severity === "warning").length,
+      info: mockOptimizationFindings.filter((f) => f.severity === "info").length,
+    };
+    return NextResponse.json({
+      findings: mockOptimizationFindings,
+      summary: {
+        total: mockOptimizationFindings.length,
+        ...bySeverity,
+        estimatedMonthlySavings: Math.round(totalSavings),
+        estimatedAnnualSavings: Math.round(totalSavings * 12),
+      },
+    });
+  }
+
+  const ec2 = getEc2Client(region);
+  const rds = getRdsClient(region);
+  const ecs = getEcsClient(region);
+  const s3 = getS3Client(region);
+  const cw = getCloudWatchClient(region);
+  const alb = getElbClient(region);
 
   const findings: Finding[] = [];
   let totalSavings = 0;

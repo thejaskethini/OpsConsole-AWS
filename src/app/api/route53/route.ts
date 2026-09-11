@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
-import {
-  Route53Client,
-  ListHostedZonesCommand,
-} from "@aws-sdk/client-route-53";
+import { ListHostedZonesCommand } from "@aws-sdk/client-route-53";
+import { getRoute53Client, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockRoute53Zones } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
-    const r53 = new Route53Client({ region: "us-east-1" });
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      return NextResponse.json(mockRoute53Zones);
+    }
+
+    const r53 = getRoute53Client();
     const zones: Record<string, unknown>[] = [];
     let marker: string | undefined;
 
@@ -26,7 +32,7 @@ export async function GET() {
 
     return NextResponse.json(zones);
   } catch (error: unknown) {
-    console.error("Route53 API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch Route53 data" }, { status: 500 });
+    logger.error("Route53 API Error", error);
+    return handleAwsError(error, "Failed to fetch Route53 data");
   }
 }

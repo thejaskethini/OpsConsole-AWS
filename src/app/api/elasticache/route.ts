@@ -1,23 +1,41 @@
 import { NextResponse } from "next/server";
-import { ElastiCacheClient, DescribeCacheClustersCommand } from "@aws-sdk/client-elasticache";
-
-function getElastiCacheClient(region?: string) {
-  return new ElastiCacheClient({
-    region: region || process.env.AWS_DEFAULT_REGION || "ap-south-1",
-    credentials: process.env.AWS_ACCESS_KEY_ID ? {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!.trim(),
-      sessionToken: process.env.AWS_SESSION_TOKEN?.trim(),
-    } : undefined,
-  });
-}
+import { DescribeCacheClustersCommand } from "@aws-sdk/client-elasticache";
+import { getElastiCacheClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockElastiCacheClusters } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const region = searchParams.get("region") || undefined;
-    const client = getElastiCacheClient(region);
 
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      const clusters = mockElastiCacheClusters.map((c) => ({
+        ClusterId: c.CacheClusterId,
+        Engine: c.Engine,
+        EngineVersion: c.EngineVersion,
+        Status: c.Status,
+        NodeType: c.CacheNodeType,
+        NumNodes: c.NumCacheNodes,
+        ReplicationGroupId: null,
+        Endpoint: c.EndpointAddress,
+        Port: c.EndpointPort,
+        CreatedAt: "2025-08-01T00:00:00.000Z",
+      }));
+
+      const summary = {
+        total: clusters.length,
+        available: clusters.filter((c) => c.Status === "available").length,
+        redis: clusters.filter((c) => c.Engine === "redis").length,
+        memcached: clusters.filter((c) => c.Engine === "memcached").length,
+      };
+
+      return NextResponse.json({ clusters, summary });
+    }
+
+    const client = getElastiCacheClient(region);
     const res = await client.send(new DescribeCacheClustersCommand({ ShowCacheNodeInfo: true }));
 
     const clusters = (res.CacheClusters || []).map((c: any) => ({
@@ -42,7 +60,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ clusters, summary });
   } catch (error: unknown) {
-    console.error("ElastiCache API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch ElastiCache data" }, { status: 500 });
+    logger.error("ElastiCache API Error", error);
+    return handleAwsError(error, "Failed to fetch ElastiCache data");
   }
 }

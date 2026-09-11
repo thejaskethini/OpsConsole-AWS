@@ -31,7 +31,7 @@ function quickValidateToken(token: string | undefined): boolean {
 
   // Check the token is not expired (8 hours)
   const age = Date.now() - timestamp;
-  return age > 0 && age < COOKIE_MAX_AGE_MS;
+  return age >= 0 && age < COOKIE_MAX_AGE_MS;
 }
 
 // Routes that do NOT require authentication

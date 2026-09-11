@@ -295,7 +295,7 @@ export default function SecurityPage() {
                 <p className="text-[11px] text-slate-600 mt-1">IAM permissions may be restricted — check roles for elevated access.</p>
               </div>
             ) : filteredPrivUsers.length === 0 ? (
-              <div className="p-8 text-center text-slate-600 text-[12px]">No users matching "{privFilter}" filter.</div>
+              <div className="p-8 text-center text-slate-600 text-[12px]">No users matching &quot;{privFilter}&quot; filter.</div>
             ) : (
               <div className="divide-y divide-white/[0.03]">
                 {filteredPrivUsers.map((u) => (

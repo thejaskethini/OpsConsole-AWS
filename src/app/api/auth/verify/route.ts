@@ -1,16 +1,29 @@
 import { NextResponse } from 'next/server';
 import { verifySession, signSession, buildSetCookieHeader } from '@/lib/session';
+import { logger } from '@/lib/logger';
 
-// Simple in-memory rate limiting (per server process)
+// Simple in-memory rate limiting (per server process) with TTL pruning
 const attempts: Map<string, { count: number; resetAt: number }> = new Map();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function pruneAttempts() {
+  const now = Date.now();
+  if (attempts.size > 50) {
+    for (const [key, entry] of attempts.entries()) {
+      if (now > entry.resetAt) {
+        attempts.delete(key);
+      }
+    }
+  }
+}
 
 function getClientIP(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
 
 function isRateLimited(ip: string): boolean {
+  pruneAttempts();
   const now = Date.now();
   const entry = attempts.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -39,6 +52,7 @@ export async function POST(req: Request) {
 
   // Rate limiting check
   if (isRateLimited(ip)) {
+    logger.warn('Auth rate limit reached', { ip });
     return NextResponse.json(
       { success: false, message: 'Too many attempts. Try again in 15 minutes.' },
       { status: 429 }
@@ -55,7 +69,7 @@ export async function POST(req: Request) {
 
     const expectedPassword = process.env.AUTH_PASSWORD;
     if (!expectedPassword) {
-      console.error('[auth] AUTH_PASSWORD env var is not set.');
+      logger.error('AUTH_PASSWORD environment variable is not set');
       return NextResponse.json({ success: false, message: 'Server misconfiguration.' }, { status: 500 });
     }
 

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { TrendingDown, RefreshCw, Loader, AlertTriangle, Info, CheckCircle, DollarSign } from "lucide-react";
 import { useRegion } from "@/components/RegionProvider";
 
@@ -83,7 +83,7 @@ export default function OptimizationPage() {
           </div>
           <div>
             <h2 className="text-white font-semibold text-lg">Ready to Scan</h2>
-            <p className="text-slate-500 text-sm mt-1 max-w-md">Click "Scan & Generate Report" to read your AWS resources and get a comprehensive optimisation report with cost-saving opportunities.</p>
+            <p className="text-slate-500 text-sm mt-1 max-w-md">Click &quot;Scan &amp; Generate Report&quot; to read your AWS resources and get a comprehensive optimisation report with cost-saving opportunities.</p>
           </div>
           <div className="flex gap-4 text-xs text-slate-600 mt-2">
             <span>✓ EC2 instances</span><span>✓ RDS databases</span><span>✓ EBS volumes</span>

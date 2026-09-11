@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { EC2Client, DescribeSecurityGroupsCommand, DescribeVpcsCommand } from "@aws-sdk/client-ec2";
+import { DescribeSecurityGroupsCommand, DescribeVpcsCommand } from "@aws-sdk/client-ec2";
 import {
-  IAMClient,
   ListUsersCommand,
   GetAccountSummaryCommand,
   ListAttachedUserPoliciesCommand,
@@ -9,6 +8,9 @@ import {
   ListGroupsForUserCommand,
   ListAttachedGroupPoliciesCommand,
 } from "@aws-sdk/client-iam";
+import { getEc2Client, getIamClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 const HIGH_PRIV_POLICIES = [
   "AdministratorAccess",
@@ -26,28 +28,6 @@ function classifyPolicy(policyName: string): "ADMIN" | "POWER" | "ELEVATED" {
   if (ADMIN_POLICIES.some(p => policyName.includes(p))) return "ADMIN";
   if (POWER_POLICIES.some(p => policyName.includes(p))) return "POWER";
   return "ELEVATED";
-}
-
-function getCredentials() {
-  return process.env.AWS_ACCESS_KEY_ID ? {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!.trim(),
-    sessionToken: process.env.AWS_SESSION_TOKEN?.trim(),
-  } : undefined;
-}
-
-function getEc2Client(region?: string) {
-  return new EC2Client({
-    region: region || process.env.AWS_DEFAULT_REGION || "ap-south-1",
-    credentials: getCredentials(),
-  });
-}
-
-function getIamClient() {
-  return new IAMClient({
-    region: "us-east-1",
-    credentials: getCredentials(),
-  });
 }
 
 // Determine port severity level
@@ -75,6 +55,70 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const region = searchParams.get("region") || undefined;
+
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      return NextResponse.json({
+        riskyGroups: [
+          {
+            GroupId: "sg-0123456789prod",
+            GroupName: "public-web-sg",
+            Description: "Security group for public Application Load Balancer",
+            VpcId: "vpc-0123456789abcdef0",
+            VpcName: "Production VPC",
+            Severity: "HIGH",
+            InboundRules: [
+              { Port: 80, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
+              { Port: 443, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
+            ],
+          },
+        ],
+        enrichedSgs: [
+          {
+            GroupId: "sg-0123456789prod",
+            GroupName: "public-web-sg",
+            Description: "Security group for public Application Load Balancer",
+            VpcId: "vpc-0123456789abcdef0",
+            VpcName: "Production VPC",
+            Severity: "HIGH",
+            InboundRules: [
+              { Port: 80, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
+              { Port: 443, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
+            ],
+          },
+          {
+            GroupId: "sg-0987654321db",
+            GroupName: "database-internal-sg",
+            Description: "Internal Postgres and Redis security group",
+            VpcId: "vpc-0123456789abcdef0",
+            VpcName: "Production VPC",
+            Severity: "MEDIUM",
+            InboundRules: [],
+          },
+        ],
+        highPrivUsers: [
+          {
+            UserName: "admin-sre-lead",
+            UserId: "AIDA1234567890ABCDEF",
+            CreateDate: "2025-01-10T00:00:00.000Z",
+            PasswordLastUsed: "2026-03-10T09:00:00.000Z",
+            TopSeverity: "ADMIN",
+            Policies: [{ name: "AdministratorAccess", type: "managed", severity: "ADMIN" }],
+          },
+        ],
+        summary: {
+          totalSGs: 8,
+          riskySGs: 1,
+          criticalSGs: 0,
+          highSGs: 1,
+          mediumSGs: 0,
+          totalVpcs: 1,
+          adminUsers: 1,
+          powerUsers: 0,
+        },
+      });
+    }
+
     const ec2 = getEc2Client(region);
     const iam = getIamClient();
 

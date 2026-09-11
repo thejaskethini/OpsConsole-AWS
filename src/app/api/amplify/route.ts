@@ -1,13 +1,31 @@
 import { NextResponse } from "next/server";
-import {
-  AmplifyClient,
-  ListAppsCommand,
-} from "@aws-sdk/client-amplify";
+import { ListAppsCommand } from "@aws-sdk/client-amplify";
+import { getAmplifyClient, hasAwsCredentials } from "@/lib/aws-clients";
+import { mockAmplifyApps } from "@/modules/cloud/mock-data";
+import { handleAwsError } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Amplify is region-specific but commonly us-east-1; use the default credential chain region
-    const amplify = new AmplifyClient({ region: process.env.AWS_DEFAULT_REGION || "ap-south-1" });
+    const { searchParams } = new URL(request.url);
+    const region = searchParams.get("region") || undefined;
+
+    // Offline / Local Development Fallback
+    if (!hasAwsCredentials()) {
+      const apps = mockAmplifyApps.map((app) => ({
+        AppId: app.AppId,
+        Name: app.Name,
+        DefaultDomain: app.DefaultDomain,
+        Repository: "github.com/example/opsconsole-portal",
+        Platform: "WEB",
+        CreateTime: "2025-06-01T00:00:00.000Z",
+        UpdateTime: app.LastDeployTime,
+        ProductionBranch: "main",
+      }));
+      return NextResponse.json(apps);
+    }
+
+    const amplify = getAmplifyClient(region);
     const apps: Record<string, unknown>[] = [];
     let nextToken: string | undefined;
 
@@ -30,7 +48,7 @@ export async function GET() {
 
     return NextResponse.json(apps);
   } catch (error: unknown) {
-    console.error("Amplify API Error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch Amplify data" }, { status: 500 });
+    logger.error("Amplify API Error", error);
+    return handleAwsError(error, "Failed to fetch Amplify data");
   }
 }

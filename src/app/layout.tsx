@@ -3,8 +3,8 @@ import "./globals.css";
 import { ClientLayout } from "@/components/ClientLayout";
 
 export const metadata: Metadata = {
-  title: "AWS OpsConsole — Cloud Observability",
-  description: "Production-grade read-only AWS monitoring dashboard",
+  title: "OpsConsole — Cloud SRE Platform",
+  description: "Production-grade Cloud Observability and SRE Platform",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

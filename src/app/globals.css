@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-background: #090e1a;
+  --color-background: #090d16;
   --color-foreground: #e2e8f0;
 }
 
@@ -11,97 +11,76 @@
     box-sizing: border-box;
   }
   body {
-    background: #090e1a;
-    background-image:
-      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(56,189,248,.03) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 30% at 80% 100%, rgba(139,92,246,.02) 0%, transparent 50%);
-    background-attachment: fixed;
+    background-color: #090d16;
     color: var(--color-foreground);
-    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     @apply antialiased;
+    letter-spacing: -0.011em;
   }
 
-  /* Sleek scrollbars */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  /* Sleek, restrained scrollbars */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(100,116,139,.25); border-radius: 999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,.4); }
+  ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
 
   /* ReactFlow edge animation */
-  .react-flow__edge-path { transition: stroke 0.3s ease, opacity 0.3s ease; }
-  .react-flow__handle { transition: opacity 0.3s ease; }
+  .react-flow__edge-path { transition: stroke 0.2s ease, opacity 0.2s ease; }
+  .react-flow__handle { transition: opacity 0.2s ease; }
 }
 
-/* Keyframes for premium animations */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* ─── Enterprise Surface System ─────────────────────────────────────── */
+.surface-app {
+  background-color: #090d16;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
+.surface-sidebar {
+  background-color: #0c1220;
 }
 
-@keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(56,189,248,.4); }
-  70% { box-shadow: 0 0 0 6px rgba(56,189,248,0); }
-  100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+.surface-card {
+  background-color: #0d1527;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+.surface-card-hover {
+  transition: all 0.15s ease;
 }
 
-.animate-shimmer {
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
+.surface-card-hover:hover {
+  background-color: #101a30;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+.surface-elevated {
+  background-color: #121d36;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradient-shift 4s ease infinite;
-}
-
-/* Card glass effect */
+/* Backward compatibility for legacy classes */
 .glass-card {
-  background: linear-gradient(135deg, rgba(15,23,42,.6) 0%, rgba(15,23,42,.3) 100%);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(148,163,184,.06);
+  background-color: #0d1527;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .glass-card:hover {
-  border-color: rgba(56,189,248,.12);
-  background: linear-gradient(135deg, rgba(15,23,42,.7) 0%, rgba(15,23,42,.4) 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: #101a30;
 }
 
-/* Premium button base */
-.btn-premium {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(.4,0,.2,1);
-}
-
-.btn-premium::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
-  transform: translateX(-100%);
-  transition: transform 0.5s ease;
-}
-
-.btn-premium:hover::after {
-  transform: translateX(100%);
-}
-
-/* Monospace text */
-.font-mono-brand {
+/* ─── Typography & Code ─────────────────────────────────────────────── */
+.font-mono-brand,
+.font-mono {
   font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.02em;
+}
+
+.font-heading {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Restrained micro-transitions */
+.transition-smooth {
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }

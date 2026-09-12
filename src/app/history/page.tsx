@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clock, RefreshCw, Loader, AlertTriangle, Info, Server, Database, Container, Terminal, ShieldAlert, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, RefreshCw, Loader2, AlertTriangle, Info, Server, Database, Container, Terminal, ShieldAlert, ChevronDown } from "lucide-react";
 import { useRegion } from "@/components/RegionProvider";
 
 interface HistoryEvent {
@@ -18,9 +18,9 @@ interface HistoryEvent {
 }
 
 const severityConfig = {
-  critical: { icon: ShieldAlert, color: "text-rose-400", border: "border-rose-500/15", badge: "bg-rose-900/15 text-rose-400 border-rose-500/15" },
-  warning:  { icon: AlertTriangle, color: "text-amber-400", border: "border-amber-500/15", badge: "bg-amber-900/15 text-amber-400 border-amber-500/15" },
-  info:     { icon: Info, color: "text-cyan-400", border: "border-cyan-500/10", badge: "bg-cyan-900/10 text-cyan-400 border-cyan-500/10" },
+  critical: { icon: ShieldAlert, color: "text-rose-400", border: "border-rose-500/20", badge: "bg-rose-500/10 text-rose-300 border-rose-500/20" },
+  warning:  { icon: AlertTriangle, color: "text-amber-400", border: "border-amber-500/20", badge: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
+  info:     { icon: Info, color: "text-cyan-400", border: "border-cyan-500/15", badge: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20" },
 };
 
 const typeIcon = (type: string) => {
@@ -57,122 +57,127 @@ export default function HistoryPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6 max-w-[1200px] mx-auto">
+    <div className="flex flex-col gap-6 w-full pb-16">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/15">
-              <Clock size={16} className="text-rose-400" />
-            </div>
-            Failure History
-          </h1>
-          <p className="text-[12px] text-slate-500 mt-1.5 ml-[42px]">CloudTrail audit — resource downtime in the last 7 days</p>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-heading">Failure History</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-300 border border-rose-500/20 font-mono">
+              Audit Timeline
+            </span>
+          </div>
+          <p className="text-sm text-slate-400">AWS CloudTrail audit — downtime incidents and state changes in the last 7 days</p>
         </div>
         <div className="flex gap-3 items-center">
-            <input 
-                type="text" 
-                placeholder="Search resource or event…" 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="bg-white/[0.03] border border-white/[0.06] text-[12px] text-slate-300 rounded-xl px-4 py-2 focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/10 w-64 placeholder:text-slate-600 transition-all"
-            />
-            <button onClick={fetchData} disabled={loading}
-            className="btn-premium flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white text-[12px] rounded-xl transition-all font-semibold cursor-pointer shadow-lg shadow-cyan-500/10">
-            {loading ? <Loader size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+          <input 
+            type="text" 
+            placeholder="Search resource or event…" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-white/[0.03] border border-white/[0.08] text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-cyan-500/50 w-64 placeholder:text-slate-500 font-mono transition-all"
+          />
+          <button 
+            onClick={fetchData} 
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 text-xs rounded-lg transition-colors font-medium cursor-pointer"
+          >
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
             {loading ? "Scanning…" : "Refresh"}
-            </button>
+          </button>
         </div>
       </div>
 
-      {error && <div className="glass-card border-rose-500/20 text-rose-400 rounded-xl p-4 text-[12px]">Error: {error}</div>}
+      {error && <div className="surface-card border-rose-500/30 text-rose-300 rounded-xl p-4 text-xs">Error: {error}</div>}
 
       <div className="flex flex-col gap-3">
         {loading && (
-           <div className="text-center py-24 text-slate-600 flex flex-col items-center gap-3">
-               <Loader size={28} className="animate-spin text-cyan-500/50" />
-               <span className="text-[12px]">Scanning AWS CloudTrail…</span>
-           </div>
+          <div className="text-center py-20 text-slate-400 flex flex-col items-center gap-3 surface-card rounded-xl">
+            <Loader2 size={24} className="animate-spin text-cyan-400" />
+            <span className="text-xs font-mono">Scanning AWS CloudTrail logs…</span>
+          </div>
         )}
 
         {!loading && filtered.length === 0 && (
-          <div className="text-center py-20 glass-card rounded-2xl flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center">
-              <CheckCircle2 size={24} className="text-emerald-400" />
+          <div className="text-center py-20 surface-card rounded-xl flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Clock size={20} className="text-emerald-400" />
             </div>
-            <p className="text-emerald-400 font-semibold text-[15px] mt-2">No downtime events detected</p>
-            <p className="text-slate-600 text-[11px] max-w-md leading-relaxed">CloudTrail reports zero unexpected stop, terminate, or delete events on your infrastructure in the last 7 days.</p>
+            <p className="text-white font-semibold text-sm">No Failure Events Detected</p>
+            <p className="text-xs text-slate-400">All infrastructure resources in {region} operated normally in the selected period.</p>
           </div>
         )}
 
         {!loading && filtered.map((ev) => {
-          const cfg = severityConfig[ev.severity];
+          const cfg = severityConfig[ev.severity] || severityConfig.info;
           const SevIcon = cfg.icon;
           const TypeIcon = typeIcon(ev.resourceType);
           const isExpanded = expandedId === ev.eventId;
 
           return (
-            <div key={ev.eventId} className={`glass-card rounded-2xl transition-all duration-300 ${isExpanded ? cfg.border : ""}`}>
-              
-              {/* Event Header */}
+            <div 
+              key={ev.eventId} 
+              className={`surface-card rounded-xl p-4.5 border transition-all ${cfg.border} ${isExpanded ? "bg-[#0e172c]" : ""}`}
+            >
               <div 
-                className="flex items-center justify-between p-4 cursor-pointer group"
+                className="flex items-center justify-between cursor-pointer"
                 onClick={() => setExpandedId(isExpanded ? null : ev.eventId)}
               >
-                <div className="flex items-center gap-3.5 flex-1">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${cfg.badge}`}>
-                    <SevIcon size={16} />
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center shrink-0">
+                    <SevIcon size={16} className={cfg.color} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-white font-semibold text-[13px] flex items-center gap-2">
-                            <TypeIcon size={12} className={cfg.color} />
-                            {ev.resourceId}
-                        </h3>
-                        <span className={`text-[8px] uppercase tracking-[0.1em] font-bold px-2 py-0.5 rounded-md border ${cfg.badge}`}>
-                            {ev.eventName}
-                        </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-white font-semibold text-xs font-mono">{ev.eventName}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${cfg.badge}`}>
+                        {ev.severity.toUpperCase()}
+                      </span>
                     </div>
-                    <div className="flex gap-4 text-[10px] text-slate-600 mt-1 font-medium">
-                        <span className="font-mono-brand">{new Date(ev.timestamp).toLocaleString()}</span>
-                        <span>User: {ev.username || "AWS System"}</span>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                      <span className="flex items-center gap-1 font-mono text-[11px]">
+                        <TypeIcon size={12} className="text-slate-500" />
+                        {ev.resourceId}
+                      </span>
+                      <span>•</span>
+                      <span className="font-mono text-[11px] text-slate-500">User: {ev.username}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-cyan-500/70 group-hover:text-cyan-400 font-medium transition-colors">
-                        {isExpanded ? "Collapse" : "View Details"}
-                    </span>
-                    {isExpanded ? <ChevronUp size={14} className="text-slate-600" /> : <ChevronDown size={14} className="text-slate-600" />}
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {new Date(ev.timestamp).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <ChevronDown size={14} className={`text-slate-500 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                 </div>
               </div>
 
-              {/* Expanded Details */}
               {isExpanded && (
-                <div className="px-5 pb-5 flex flex-col gap-5">
-                    <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <h4 className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.15em] mb-2">Root Cause</h4>
-                            <div className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-xl text-[12px] text-slate-400 leading-relaxed">
-                                {ev.hasError && <span className="text-rose-400 font-bold mr-1">API Error:</span>}
-                                {ev.reason}
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.15em] mb-2">Recovery Steps</h4>
-                            <div className="bg-emerald-500/[0.03] border border-emerald-500/10 p-3.5 rounded-xl text-[12px]">
-                                <ul className="list-disc list-inside text-slate-400 space-y-1.5">
-                                    {ev.recoverySteps.map((step, i) => (<li key={i}>{step}</li>))}
-                                </ul>
-                            </div>
-                        </div>
+                <div className="mt-4 pt-3.5 border-t border-white/[0.06] flex flex-col gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-semibold uppercase text-[10.5px] tracking-wider block mb-1">
+                      Event Summary & Root Cause
+                    </span>
+                    <p className="text-slate-200 leading-relaxed bg-white/[0.02] p-3 rounded-lg border border-white/[0.04] font-mono text-[11.5px]">
+                      {ev.reason}
+                    </p>
+                  </div>
+
+                  {ev.recoverySteps && ev.recoverySteps.length > 0 && (
+                    <div>
+                      <span className="text-slate-400 font-semibold uppercase text-[10.5px] tracking-wider block mb-1.5">
+                        Recommended Recovery Procedures
+                      </span>
+                      <div className="flex flex-col gap-1.5">
+                        {ev.recoverySteps.map((step, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-slate-300 bg-white/[0.015] px-3 py-1.5 rounded border border-white/[0.04]">
+                            <span className="text-cyan-400 font-mono text-[10.5px] font-bold">0{idx + 1}</span>
+                            <span className="text-[11.5px]">{step}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex gap-4 text-[9px] text-slate-700 font-mono-brand border-t border-white/[0.03] pt-3">
-                        <span>Event: {ev.eventId?.slice(0, 20)}…</span>
-                        <span>IP: {ev.sourceIp}</span>
-                        <span>Type: {ev.resourceType}</span>
-                    </div>
+                  )}
                 </div>
               )}
             </div>

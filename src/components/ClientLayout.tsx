@@ -605,24 +605,24 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </nav>
 
-          {/* Footer — Status indicators */}
-          <div className="px-3 py-2.5 border-t border-white/[0.06] shrink-0">
+          {/* Footer — Status indicators with generous bottom padding */}
+          <div className="px-3.5 py-3 border-t border-white/[0.06] shrink-0 pb-8 bg-[#090d16]/60 backdrop-blur-sm">
             {isCollapsed ? (
-              <div className="flex justify-center" title={`AWS Connected (${region}) · Simulated SRE`}>
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <div className="flex justify-center py-1" title={`AWS Connected (${region}) · Simulated SRE`}>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] animate-pulse-subtle" />
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5 text-[11px]">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <div className="flex flex-col gap-2 text-xs">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="flex items-center gap-2 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] animate-pulse-subtle" />
                     AWS Connected
                   </span>
-                  <span className="font-mono text-[10px] text-slate-500">{region}</span>
+                  <span className="font-mono text-[11px] text-cyan-400/80 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">{region}</span>
                 </div>
-                <div className="flex items-center justify-between text-slate-500 text-[10px] font-mono">
+                <div className="flex items-center justify-between text-slate-400 text-[11px] font-mono">
                   <span>SRE Telemetry</span>
-                  <span className="text-violet-400">SIMULATED</span>
+                  <span className="text-violet-300 font-semibold bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-500/20">SIMULATED</span>
                 </div>
               </div>
             )}

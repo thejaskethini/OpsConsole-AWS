@@ -117,17 +117,16 @@ function inferVariant(status: string): StatusVariant {
   return "neutral";
 }
 
-export function StatusBadge({ status, variant, pulse, className = "" }: StatusBadgeProps) {
+export function StatusBadge({ status, variant, pulse = false, className = "" }: StatusBadgeProps) {
   const resolvedVariant = variant || inferVariant(status);
   const style = variantStyles[resolvedVariant] || variantStyles.neutral;
-  const isPulsing = pulse ?? (resolvedVariant === "healthy" || resolvedVariant === "critical");
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${style.bg} ${style.text} ${style.border} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${style.bg} ${style.text} ${style.border} ${className}`}
     >
-      <span className="relative flex h-1.5 w-1.5">
-        {isPulsing && (
+      <span className="relative flex h-1.5 w-1.5 shrink-0">
+        {pulse && (
           <span
             className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${style.dot}`}
           />

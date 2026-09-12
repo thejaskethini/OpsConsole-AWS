@@ -28,6 +28,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   { id: "members:read",        resource: "members",        action: "read",   description: "View workspace members and roles" },
   { id: "members:manage",      resource: "members",        action: "manage", description: "Invite, remove, and update member roles" },
   { id: "settings:manage",     resource: "settings",       action: "manage", description: "Manage workspace settings and integrations" },
+  { id: "sre:read",            resource: "sre",            action: "read",   description: "View SRE services, SLOs, golden signals, and reliability health" },
+  { id: "sre:manage",          resource: "sre",            action: "manage", description: "Manage SRE services, SLO configurations, and reliability policies" },
 ];
 
 // ─── All Roles ────────────────────────────────────────────────────────────────
@@ -77,6 +79,8 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "members:read",
     "members:manage",
     "settings:manage",
+    "sre:read",
+    "sre:manage",
   ],
   admin: [
     "dashboard:read",
@@ -96,6 +100,8 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "members:read",
     "members:manage",
     "settings:manage",
+    "sre:read",
+    "sre:manage",
   ],
   operator: [
     "dashboard:read",
@@ -113,6 +119,8 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "optimization:read",
     "workspace:read",
     "members:read",
+    "sre:read",
+    "sre:manage",
   ],
   viewer: [
     "dashboard:read",
@@ -127,6 +135,7 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "optimization:read",
     "workspace:read",
     "members:read",
+    "sre:read",
   ],
 };
 

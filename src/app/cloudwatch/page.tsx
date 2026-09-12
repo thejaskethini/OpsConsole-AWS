@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BarChart2, Loader, AlertCircle } from "lucide-react";
+import { BarChart2, Loader, AlertCircle, AlertTriangle, CheckCircle, HelpCircle } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { StatCard } from "@/components/common/StatCard";
 
 interface CWAlarm {
   AlarmName: string;
@@ -15,10 +17,19 @@ interface CWAlarm {
   StateUpdatedTimestamp: string;
 }
 
-const STATE_COLOR: Record<string, string> = {
-  ALARM: "text-red-400 bg-red-500/10 border-red-500/20",
-  OK: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  INSUFFICIENT_DATA: "text-slate-400 bg-slate-500/10 border-slate-500/20",
+const STATE_CONFIG: Record<string, { badge: string; icon: typeof AlertCircle }> = {
+  ALARM: {
+    badge: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+    icon: AlertCircle,
+  },
+  OK: {
+    badge: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    icon: CheckCircle,
+  },
+  INSUFFICIENT_DATA: {
+    badge: "bg-slate-500/10 text-slate-400 border border-slate-500/20",
+    icon: HelpCircle,
+  },
 };
 
 export default function CloudWatchPage() {
@@ -44,68 +55,88 @@ export default function CloudWatchPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-          <BarChart2 size={18} className="text-cyan-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-white">CloudWatch Alarms</h1>
-          <p className="text-[11px] text-slate-500">Monitoring alarms — all states</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={BarChart2}
+        title="CloudWatch Alarms"
+        subtitle="Infrastructure threshold alerts, metric conditions, and real-time state telemetry"
+        iconColor="#06b6d4"
+        iconBgColor="rgba(6, 182, 212, 0.1)"
+        tag={
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            AWS Substrate
+          </span>
+        }
+      />
 
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: "Total Alarms", value: data.length, color: "#06b6d4" },
-          { label: "In ALARM", value: alarmCount, color: "#f43f5e" },
-          { label: "OK", value: okCount, color: "#10b981" },
-          { label: "Insufficient Data", value: insufficientCount, color: "#64748b" },
-        ].map(s => (
-          <div key={s.label} className="glass-card rounded-xl p-4">
-            <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">{s.label}</p>
-            <p className="text-2xl font-bold font-mono-brand" style={{ color: s.color }}>{s.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={BarChart2}
+          label="Total Alarms"
+          value={data.length}
+          color="#06b6d4"
+        />
+        <StatCard
+          icon={AlertCircle}
+          label="In ALARM"
+          value={alarmCount}
+          color="#f43f5e"
+        />
+        <StatCard
+          icon={CheckCircle}
+          label="OK"
+          value={okCount}
+          color="#10b981"
+        />
+        <StatCard
+          icon={HelpCircle}
+          label="Insufficient Data"
+          value={insufficientCount}
+          color="#64748b"
+        />
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 gap-2 text-slate-500">
+        <div className="flex items-center justify-center py-20 gap-2 text-slate-400 surface-card rounded-xl">
           <Loader size={16} className="animate-spin text-cyan-400" />
           <span>Loading CloudWatch alarms…</span>
         </div>
       ) : error ? (
-        <div className="glass-card rounded-xl p-6 flex items-center gap-3 text-amber-400">
-          <AlertCircle size={16} />
+        <div className="surface-card rounded-xl p-6 flex items-center gap-3 text-amber-400 border border-amber-500/20">
+          <AlertCircle size={18} />
           <div>
             <p className="font-semibold text-sm">Could not load CloudWatch data</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">{error} — check IAM permissions for cloudwatch:DescribeAlarms</p>
+            <p className="text-xs text-slate-400 mt-0.5">{error} — check IAM permissions for cloudwatch:DescribeAlarms</p>
           </div>
         </div>
       ) : data.length === 0 ? (
-        <div className="glass-card rounded-xl p-10 text-center text-slate-600">No CloudWatch alarms configured</div>
+        <div className="surface-card rounded-xl p-12 text-center text-slate-400">No CloudWatch alarms configured</div>
       ) : (
-        <div className="glass-card rounded-xl overflow-hidden">
-          <table className="w-full text-[12px]">
+        <div className="surface-card rounded-xl overflow-hidden">
+          <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-white/[0.04]">
+              <tr className="border-b border-white/[0.06] bg-white/[0.01]">
                 {["Alarm Name", "State", "Namespace", "Metric", "Threshold", "Last Updated"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-600">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/[0.04]">
               {data.sort((a, b) => (a.StateValue === "ALARM" ? -1 : 1)).map((alarm, i) => {
-                const sc = STATE_COLOR[alarm.StateValue] || STATE_COLOR.INSUFFICIENT_DATA;
+                const conf = STATE_CONFIG[alarm.StateValue] || STATE_CONFIG.INSUFFICIENT_DATA;
+                const StateIcon = conf.icon;
                 return (
-                  <tr key={alarm.AlarmName} className={`border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "" : "bg-white/[0.01]"}`}>
-                    <td className="px-4 py-3 font-medium text-white text-[11px]">{alarm.AlarmName}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sc}`}>{alarm.StateValue}</span>
+                  <tr key={alarm.AlarmName} className={`hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "" : "bg-white/[0.01]"}`}>
+                    <td className="px-4 py-3.5 font-medium text-white text-xs">{alarm.AlarmName}</td>
+                    <td className="px-4 py-3.5">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 w-fit ${conf.badge}`}>
+                        <StateIcon size={10} />
+                        {alarm.StateValue}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-500 text-[10px]">{alarm.Namespace}</td>
-                    <td className="px-4 py-3 text-slate-400 text-[10px]">{alarm.MetricName}</td>
-                    <td className="px-4 py-3 text-slate-300 font-mono-brand text-[10px]">{alarm.Threshold}</td>
-                    <td className="px-4 py-3 text-slate-500 text-[10px]">
+                    <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{alarm.Namespace}</td>
+                    <td className="px-4 py-3.5 text-slate-300 font-mono text-xs">{alarm.MetricName}</td>
+                    <td className="px-4 py-3.5 text-slate-200 font-mono">{alarm.Threshold}</td>
+                    <td className="px-4 py-3.5 text-slate-400 text-xs">
                       {alarm.StateUpdatedTimestamp ? new Date(alarm.StateUpdatedTimestamp).toLocaleDateString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" } as Intl.DateTimeFormatOptions) : "—"}
                     </td>
                   </tr>

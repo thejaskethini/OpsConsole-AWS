@@ -9,7 +9,7 @@ import {
   Loader2, GitBranch, Cpu, Radio, HardDrive, Layers,
   Wifi, BarChart2, FlaskConical, Users, Settings, Building2,
   Activity, Target, ServerCog, Bell, Cloud, ChevronLeft,
-  Sparkles,
+  Sparkles, AlertOctagon,
 } from "lucide-react";
 import { RegionProvider, useRegion } from "@/components/RegionProvider";
 import { IdentityProvider } from "@/components/identity/IdentityProvider";
@@ -46,6 +46,7 @@ const reliabilityNavItems: NavItemDef[] = [
   { href: "/sre", icon: Activity, label: "SRE Health" },
   { href: "/slos", icon: Target, label: "SLOs & Error Budgets" },
   { href: "/alerts", icon: Bell, label: "Alerts" },
+  { href: "/incidents", icon: AlertOctagon, label: "Incidents" },
   { href: "/history", icon: Clock, label: "Failure History" },
 ];
 

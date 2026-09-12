@@ -8,6 +8,7 @@ import {
   Clock, ChevronRight, ChevronDown, Globe, Lock, Eye, EyeOff,
   Loader2, GitBranch, Cpu, Radio, HardDrive, Layers,
   Wifi, BarChart2, FlaskConical, Users, Settings, Building2,
+  Activity, Target, ServerCog,
 } from "lucide-react";
 import { RegionProvider, useRegion } from "@/components/RegionProvider";
 import { IdentityProvider } from "@/components/identity/IdentityProvider";
@@ -16,48 +17,55 @@ import { EnvironmentSwitcher } from "@/components/identity/EnvironmentSwitcher";
 import { UserMenu } from "@/components/identity/UserMenu";
 
 const navItems = [
-  // ── Dashboard ──────────────────────────────────────
-  { href: "/",               icon: LayoutDashboard, label: "Overview",          group: "main" },
-  { href: "/infrastructure", icon: Network,          label: "Infrastructure Map",group: "main" },
-  { href: "/optimization",   icon: TrendingDown,     label: "Optimization",      group: "main" },
-  { href: "/history",        icon: Clock,            label: "Failure History",   group: "main" },
-  // ── Compute & Containers ───────────────────────────
+  // ── Observe ────────────────────────────────────────
+  { href: "/",               icon: LayoutDashboard, label: "Overview",          group: "observe" },
+  { href: "/services",       icon: ServerCog,        label: "Services",          group: "observe" },
+  { href: "/infrastructure", icon: Network,          label: "Infrastructure Map",group: "observe" },
+  { href: "/cloudwatch",     icon: BarChart2,        label: "Metrics & Logs",    group: "observe" },
+
+  // ── Reliability (SRE) ──────────────────────────────
+  { href: "/sre",            icon: Activity,         label: "SRE Health",        group: "reliability" },
+  { href: "/slos",           icon: Target,           label: "SLOs & Error Budget",group: "reliability" },
+  { href: "/history",        icon: Clock,            label: "Failure History",   group: "reliability" },
+
+  // ── Cloud Compute & Data ───────────────────────────
   { href: "/ec2",            icon: Server,           label: "EC2 Instances",     group: "compute" },
   { href: "/ecs",            icon: Container,        label: "ECS Clusters",      group: "compute" },
   { href: "/elasticache",    icon: Zap,              label: "ElastiCache",       group: "compute" },
   { href: "/lambda",         icon: Cpu,              label: "Lambda Functions",  group: "compute" },
-  // ── Storage & Data ─────────────────────────────────
   { href: "/rds",            icon: Database,         label: "RDS Databases",     group: "data" },
   { href: "/s3",             icon: Box,              label: "S3 Storage",        group: "data" },
   { href: "/dynamodb",       icon: Layers,           label: "DynamoDB",          group: "data" },
-  // ── Networking ─────────────────────────────────────
+
+  // ── Networking & DevTools ──────────────────────────
   { href: "/alb",            icon: ArrowRightLeft,   label: "Load Balancers",    group: "networking" },
   { href: "/cloudfront",     icon: Wifi,             label: "CloudFront",        group: "networking" },
   { href: "/route53",        icon: Radio,            label: "Route 53",          group: "networking" },
-  // ── Developer Services ─────────────────────────────
   { href: "/amplify",        icon: GitBranch,        label: "Amplify",           group: "devtools" },
   { href: "/codepipeline",   icon: HardDrive,        label: "CodePipeline",      group: "devtools" },
-  // ── Monitoring & Cost ──────────────────────────────
+
+  // ── Cloud Operations & Governance ──────────────────
   { href: "/cost",           icon: DollarSign,       label: "Cost Monitoring",   group: "ops" },
-  { href: "/cloudwatch",     icon: BarChart2,        label: "CloudWatch",        group: "ops" },
-  // ── Security & Operations ──────────────────────────
+  { href: "/optimization",   icon: TrendingDown,     label: "Optimization",      group: "ops" },
   { href: "/security",       icon: Shield,           label: "Security",          group: "ops" },
   { href: "/waste",          icon: Trash2,           label: "Waste",             group: "ops" },
   { href: "/sagemaker",      icon: FlaskConical,     label: "SageMaker",         group: "ops" },
-  // ── Platform ──────────────────────────────────────
+
+  // ── Platform & Workspace ───────────────────────────
   { href: "/workspace",      icon: Building2,        label: "Workspace",         group: "platform" },
   { href: "/members",        icon: Users,            label: "Members",           group: "platform" },
   { href: "/settings",       icon: Settings,         label: "Settings",          group: "platform" },
 ];
 
 const navGroups: { key: string; label: string }[] = [
-  { key: "main",       label: "Dashboard" },
-  { key: "compute",    label: "Compute" },
-  { key: "data",       label: "Storage & Data" },
-  { key: "networking", label: "Networking" },
-  { key: "devtools",   label: "Developer Tools" },
-  { key: "ops",        label: "Operations" },
-  { key: "platform",   label: "Platform" },
+  { key: "observe",     label: "Observe" },
+  { key: "reliability", label: "Reliability" },
+  { key: "compute",     label: "Compute" },
+  { key: "data",        label: "Storage & Data" },
+  { key: "networking",  label: "Networking" },
+  { key: "devtools",    label: "Developer Tools" },
+  { key: "ops",         label: "Operations" },
+  { key: "platform",    label: "Platform" },
 ];
 
 /* ── Region Selector ─────────────────────────────────────────────── */
@@ -256,16 +264,16 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
     <IdentityProvider>
       <>
         {/* ── Sidebar — FIXED ───────────────────────────────────── */}
-        <aside className="fixed top-0 left-0 h-screen w-[250px] flex flex-col border-r border-white/[0.04] bg-[#030711]/98 backdrop-blur-2xl z-50">
+        <aside className="fixed top-0 left-0 h-screen w-[250px] flex flex-col border-r border-white/[0.06] bg-[#0c1322] z-50">
           {/* Brand */}
-          <div className="px-5 py-4 border-b border-white/[0.04] shrink-0">
+          <div className="px-5 py-4 border-b border-white/[0.06] shrink-0">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-[12px] bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 flex items-center justify-center shadow-xl shadow-cyan-500/20 shrink-0">
+              <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/10 shrink-0">
                 <LayoutDashboard size={16} className="text-white drop-shadow" />
               </div>
               <div>
                 <p className="text-white font-semibold text-[14px] leading-none tracking-tight">OpsConsole</p>
-                <p className="text-[9px] text-slate-600 mt-0.5 font-medium tracking-wide">SRE PLATFORM</p>
+                <p className="text-[9px] text-slate-500 mt-0.5 font-semibold tracking-wider">SRE PLATFORM</p>
               </div>
             </div>
             {/* Workspace switcher in sidebar brand area */}
@@ -273,7 +281,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Region + Environment selectors */}
-          <div className="px-3 py-2.5 border-b border-white/[0.04] shrink-0 flex flex-col gap-2">
+          <div className="px-3 py-2.5 border-b border-white/[0.06] shrink-0 flex flex-col gap-2">
             <RegionSelector />
             <EnvironmentSwitcher />
           </div>
@@ -285,8 +293,8 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               if (items.length === 0) return null;
               return (
                 <div key={group.key}>
-                  {gi > 0 && <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent my-2" />}
-                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-600 px-3 mb-1.5">{group.label}</p>
+                  {gi > 0 && <div className="h-px bg-white/[0.04] my-2" />}
+                  <p className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-slate-500 px-3 mb-1.5">{group.label}</p>
                   {items.map(n => <NavLink key={n.href} {...n} />)}
                 </div>
               );
@@ -294,30 +302,29 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           </nav>
 
           {/* Footer — status indicator */}
-          <div className="px-4 py-3 border-t border-white/[0.04] shrink-0">
-            <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+          <div className="px-4 py-3 border-t border-white/[0.06] shrink-0">
+            <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
               </span>
-              <span className="text-[10px] text-emerald-400/80 font-medium">Read-only · {region}</span>
+              <span className="text-[10.5px] text-emerald-400 font-medium">Read-only · {region}</span>
             </div>
           </div>
         </aside>
 
         {/* ── Main ──────────────────────────────────────────────── */}
-        <div className="ml-[250px] flex flex-col h-screen w-[calc(100vw-250px)]">
+        <div className="ml-[250px] flex flex-col h-screen w-[calc(100vw-250px)] bg-[#090e1a]">
           {/* Top bar */}
-          <header className="h-[52px] shrink-0 border-b border-white/[0.04] bg-[#030711]/80 backdrop-blur-2xl flex items-center px-5 justify-between sticky top-0 z-40">
+          <header className="h-[52px] shrink-0 border-b border-white/[0.06] bg-[#0c1322]/90 backdrop-blur-md flex items-center px-5 justify-between sticky top-0 z-40">
             <div className="flex items-center gap-3">
-              <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/50" />
-              <p className="text-[12px] text-slate-500 font-medium">Cloud Observability Platform</p>
+              <div className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+              <p className="text-[12px] text-slate-400 font-medium">Cloud Observability & SRE Platform</p>
             </div>
             <div className="flex items-center gap-2.5">
-              <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500/15 to-cyan-500/15 border border-emerald-500/20">
-                <span className="text-[9.5px] font-bold text-emerald-400 tracking-widest uppercase">Live</span>
+              <div className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-[9.5px] font-bold text-emerald-400 tracking-wider uppercase">Online</span>
               </div>
-              <span className="text-[10px] text-slate-600 font-mono hidden md:block">
+              <span className="text-[10px] text-slate-500 font-mono hidden md:block">
                 {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
               </span>
               {/* User menu in top bar */}
@@ -326,7 +333,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Content */}
-          <main className="flex-1 p-6 overflow-y-auto">
+          <main className="flex-1 p-6 overflow-y-auto bg-[#090e1a]">
             {children}
           </main>
         </div>

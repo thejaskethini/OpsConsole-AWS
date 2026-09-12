@@ -62,7 +62,9 @@ export type PermissionId =
   | "workspace:manage"
   | "members:read"
   | "members:manage"
-  | "settings:manage";
+  | "settings:manage"
+  | "sre:read"
+  | "sre:manage";
 
 export interface Permission {
   id: PermissionId;

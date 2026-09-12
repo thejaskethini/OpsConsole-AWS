@@ -8,6 +8,7 @@ export interface StatCardProps {
   value: string | number;
   sub?: string;
   color?: string;
+  badge?: React.ReactNode;
   className?: string;
 }
 
@@ -17,23 +18,27 @@ export function StatCard({
   value,
   sub,
   color = "#06b6d4",
+  badge,
   className = "",
 }: StatCardProps) {
   return (
     <div
-      className={`glass-card rounded-2xl p-4.5 flex items-center gap-3.5 border border-white/[0.05] hover:border-white/[0.1] transition-all ${className}`}
+      className={`rounded-2xl p-4.5 bg-[#0a0f1d]/70 backdrop-blur-md flex items-start justify-between border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 ${className}`}
     >
-      <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: `${color}14`, border: `1px solid ${color}25` }}
-      >
-        <Icon size={18} style={{ color }} />
+      <div className="flex items-center gap-3.5 min-w-0">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.04]"
+          style={{ background: `${color}12` }}
+        >
+          <Icon size={18} style={{ color }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider truncate">{label}</p>
+          <p className="text-xl font-bold text-white font-mono-brand leading-tight mt-0.5">{value}</p>
+          {sub && <p className="text-[11px] text-slate-500 mt-1 truncate">{sub}</p>}
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider truncate">{label}</p>
-        <p className="text-xl font-bold text-white font-mono-brand leading-tight mt-0.5">{value}</p>
-        {sub && <p className="text-[10px] text-slate-400 mt-1 truncate">{sub}</p>}
-      </div>
+      {badge && <div className="shrink-0 ml-2">{badge}</div>}
     </div>
   );
 }

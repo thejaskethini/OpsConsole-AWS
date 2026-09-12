@@ -29,6 +29,7 @@ import {
   Sparkles,
   Layers,
   Cpu,
+  AlertOctagon,
 } from "lucide-react";
 import { useRegion } from "@/components/RegionProvider";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -488,6 +489,12 @@ export default function Dashboard() {
   const [sreHealth, setSreHealth] = useState<SREExecutiveHealth | null>(null);
   const [sreServices, setSreServices] = useState<ServiceWithReliability[]>([]);
   const [sreLoading, setSreLoading] = useState(true);
+  const [incidentStats, setIncidentStats] = useState<{
+    open: number;
+    sev1Count: number;
+    sev2Count: number;
+    investigating: number;
+  } | null>(null);
 
   const { region } = useRegion();
 
@@ -515,14 +522,23 @@ export default function Dashboard() {
       .catch(() => {})
       .finally(() => setMetricsLoading(false));
 
-    // Fetch SRE Health & Services in parallel
+    // Fetch SRE Health, Services, and Incidents in parallel
     Promise.all([
       fetch("/api/sre/health").then((r) => r.json()),
       fetch("/api/sre/services").then((r) => r.json()),
+      fetch("/api/incidents").then((r) => r.json()).catch(() => null),
     ])
-      .then(([healthData, servicesData]) => {
+      .then(([healthData, servicesData, incidentsData]) => {
         if (!healthData.error) setSreHealth(healthData);
         if (servicesData.services) setSreServices(servicesData.services);
+        if (incidentsData?.stats) {
+          setIncidentStats({
+            open: incidentsData.stats.open || 0,
+            sev1Count: incidentsData.stats.sev1Count || 0,
+            sev2Count: incidentsData.stats.sev2Count || 0,
+            investigating: incidentsData.stats.investigating || 0,
+          });
+        }
       })
       .catch(() => {})
       .finally(() => setSreLoading(false));
@@ -545,6 +561,18 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            href="/incidents"
+            className="px-3.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-xs text-rose-300 font-semibold transition-colors flex items-center gap-1.5"
+          >
+            <AlertOctagon size={14} className="text-rose-400" />
+            <span>Incidents</span>
+            {incidentStats && incidentStats.open > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-500/30 text-rose-200 text-[10px] font-mono font-bold">
+                {incidentStats.open}
+              </span>
+            )}
+          </Link>
           <Link
             href="/services"
             className="px-3.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-xs text-slate-200 font-medium transition-colors flex items-center gap-1.5"

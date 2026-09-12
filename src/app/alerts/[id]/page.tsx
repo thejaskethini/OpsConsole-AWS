@@ -12,6 +12,8 @@ import {
   Check,
   X,
   History,
+  AlertOctagon,
+  ExternalLink,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { AlertSeverityBadge, AlertStatusBadge } from "@/components/alerts";
@@ -30,13 +32,14 @@ export default function AlertDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [linkedIncident, setLinkedIncident] = useState<{ id: string; incidentNumber: string } | null>(null);
 
   // Modal State for Resolve
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
   const [submittingAction, setSubmittingAction] = useState(false);
 
-  const canManage = can("alerts:manage");
+  const canManage = can("alerts:manage") || can("incidents:manage");
 
   const fetchAlertDetail = async () => {
     if (!workspace) return;
@@ -50,6 +53,20 @@ export default function AlertDetailPage({
       if (data.success && data.data?.alert) {
         setAlert(data.data.alert);
         setEvents(data.data.events || []);
+
+        // Check for linked incident
+        try {
+          const incRes = await fetch(`/api/incidents?alertId=${alertId}&workspaceId=${workspace.id}`);
+          const incData = await incRes.json();
+          if (incData.success && incData.data?.incident) {
+            setLinkedIncident({
+              id: incData.data.incident.id,
+              incidentNumber: incData.data.incident.incidentNumber,
+            });
+          }
+        } catch {
+          // ignore
+        }
       } else {
         setError(data.error?.message || "Alert not found.");
       }
@@ -182,6 +199,26 @@ export default function AlertDetailPage({
         }
         actions={
           <div className="flex items-center gap-2.5">
+            {linkedIncident ? (
+              <Link
+                href={`/incidents/${linkedIncident.id}`}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs font-semibold transition-all duration-150"
+              >
+                <AlertOctagon size={14} />
+                <span>View Incident ({linkedIncident.incidentNumber})</span>
+              </Link>
+            ) : (
+              canManage &&
+              (alert.status === "FIRING" || alert.status === "ACKNOWLEDGED") && (
+                <Link
+                  href={`/incidents?declare=true&alertId=${alert.id}&serviceId=${alert.serviceId}&title=${encodeURIComponent(alert.title)}&severity=${alert.severity === "CRITICAL" ? "SEV1" : alert.severity === "WARNING" ? "SEV2" : "SEV3"}`}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs font-semibold transition-all duration-150"
+                >
+                  <AlertOctagon size={14} />
+                  <span>Declare Incident</span>
+                </Link>
+              )
+            )}
             {canManage && alert.status === "FIRING" && (
               <button
                 onClick={handleAcknowledge}

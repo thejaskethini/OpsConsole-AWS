@@ -51,6 +51,7 @@ export type PermissionId =
   | "logs:read"
   | "incidents:read"
   | "incidents:write"
+  | "incidents:manage"
   | "alerts:read"
   | "alerts:write"
   | "alerts:manage"

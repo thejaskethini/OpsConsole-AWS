@@ -1,6 +1,5 @@
 "use client";
 import { ExternalLink, CheckCircle2, AlertTriangle, AlertCircle, ArrowUpRight } from "lucide-react";
-import clsx from "clsx";
 
 export interface ResourceMetric {
   label: string;
@@ -35,86 +34,92 @@ export function ResourceCard({
   dashboardLink,
 }: ResourceCardProps) {
   return (
-    <div className="glass-card rounded-2xl p-5 flex flex-col gap-4 group hover:shadow-xl hover:shadow-cyan-950/10 transition-all duration-300 hover:-translate-y-0.5">
-      
+    <div className="surface-card rounded-xl p-5 flex flex-col gap-4 transition-colors hover:border-white/[0.12]">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-[14px] font-bold text-white mb-2 group-hover:text-cyan-100 transition-colors">{name}</h3>
-          <div className="flex gap-2.5">
+        <div className="min-w-0 pr-2">
+          <h3 className="text-sm font-semibold text-white truncate">{name}</h3>
+          <div className="flex items-center gap-3 mt-1.5">
             {awsLink && (
-              <a href={awsLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] text-cyan-500/70 hover:text-cyan-400 transition-colors font-medium">
-                AWS Console <ExternalLink size={8} />
+              <a 
+                href={awsLink} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+              >
+                AWS Console <ExternalLink size={10} />
               </a>
             )}
             {dashboardLink && (
-              <a href={dashboardLink} className="flex items-center gap-1 text-[9px] text-violet-500/70 hover:text-violet-400 transition-colors font-medium">
-                Dashboard <ArrowUpRight size={8} />
+              <a 
+                href={dashboardLink} 
+                className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors font-medium"
+              >
+                Inspect <ArrowUpRight size={10} />
               </a>
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-           <div className="flex items-center gap-1.5">
-              {isExact && (
-                <span className="px-2 py-0.5 rounded-md bg-cyan-900/20 text-cyan-400 border border-cyan-500/15 text-[8px] font-bold uppercase tracking-wider">
-                  Exact
-                </span>
-              )}
-              <span className={clsx(
-                "px-2 py-0.5 rounded-md border text-[8px] font-bold uppercase tracking-wider",
-                 provisionStatus === 'Over-provisioned' ? "bg-amber-900/15 text-amber-400 border-amber-500/15" : 
-                 provisionStatus === 'Right-sized' ? "bg-emerald-900/15 text-emerald-400 border-emerald-500/15" :
-                 "bg-rose-900/15 text-rose-400 border-rose-500/15"
-              )}>
-                 {provisionStatus}
+
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5">
+            {isExact && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                EXACT
               </span>
-           </div>
-           <span className={clsx(
-              "px-2 py-0.5 rounded-md border flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider",
-               healthStatus === 'Healthy' ? "bg-emerald-900/15 text-emerald-400 border-emerald-500/15" : 
-               healthStatus === 'Warning' ? "bg-amber-900/15 text-amber-400 border-amber-500/15" : 
-               "bg-rose-900/15 text-rose-400 border-rose-500/15"
-            )}>
-               {healthStatus === 'Healthy' && <CheckCircle2 size={8} />}
-               {healthStatus === 'Warning' && <AlertTriangle size={8} />}
-               {healthStatus === 'Critical' && <AlertCircle size={8} />}
-               {healthStatus}
+            )}
+            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${
+              provisionStatus === 'Over-provisioned' ? "bg-amber-500/10 text-amber-300 border-amber-500/20" : 
+              provisionStatus === 'Right-sized' ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" :
+              "bg-rose-500/10 text-rose-300 border-rose-500/20"
+            }`}>
+              {provisionStatus}
             </span>
+          </div>
+          <span className={`px-2 py-0.5 rounded border flex items-center gap-1 text-[10px] font-mono font-semibold ${
+            healthStatus === 'Healthy' ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" : 
+            healthStatus === 'Warning' ? "bg-amber-500/10 text-amber-300 border-amber-500/20" : 
+            "bg-rose-500/10 text-rose-300 border-rose-500/20"
+          }`}>
+            {healthStatus === 'Healthy' && <CheckCircle2 size={10} />}
+            {healthStatus === 'Warning' && <AlertTriangle size={10} />}
+            {healthStatus === 'Critical' && <AlertCircle size={10} />}
+            {healthStatus}
+          </span>
         </div>
       </div>
 
       {/* Cost */}
-      <div className="flex flex-col bg-white/[0.02] rounded-xl p-3.5 border border-white/[0.04]">
-         <span className="text-[8px] text-slate-600 font-bold tracking-[0.15em] uppercase mb-1">Cost (14-day period)</span>
-         <span className="text-xl font-bold text-white font-mono-brand">USD {cost}</span>
-         {confidence && (
-            <span className="text-[9px] text-slate-600 mt-1 font-medium">{confidence}</span>
-         )}
+      <div className="flex flex-col bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
+        <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">14-Day Allocated Cost</span>
+        <span className="text-xl font-bold text-white font-mono mt-0.5">USD ${cost}</span>
+        {confidence && (
+          <span className="text-[10.5px] text-slate-500 mt-1">{confidence}</span>
+        )}
       </div>
 
       {/* Metrics */}
-      <div className="flex flex-col gap-3">
-         {metrics.map((m, idx) => (
-             <div key={idx} className="flex items-center gap-3">
-                 <span className="text-[10px] font-medium text-slate-500 w-24 truncate">{m.label}</span>
-                 <div className="flex-1 h-[4px] bg-white/[0.03] rounded-full overflow-hidden">
-                     <div 
-                        className={clsx("h-full rounded-full transition-all duration-1000 ease-out", m.colorClass)}
-                        style={{ width: `${Math.min(Math.max(m.value, 0), 100)}%` }}
-                     />
-                 </div>
-                 <span className="text-[10px] font-mono-brand text-slate-400 w-10 text-right">{m.displayValue}</span>
-             </div>
-         ))}
+      <div className="flex flex-col gap-2.5">
+        {metrics.map((m, idx) => (
+          <div key={idx} className="flex items-center gap-3">
+            <span className="text-xs text-slate-400 w-24 truncate">{m.label}</span>
+            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${m.colorClass || "bg-cyan-500"}`}
+                style={{ width: `${Math.min(Math.max(m.value, 0), 100)}%` }}
+              />
+            </div>
+            <span className="text-xs font-mono font-semibold text-slate-200 w-12 text-right">{m.displayValue}</span>
+          </div>
+        ))}
       </div>
 
       {/* Signals */}
-      <div className="bg-white/[0.015] rounded-xl p-3 border border-white/[0.03]">
-          <span className="text-[9px] text-slate-600 leading-relaxed">
-             <strong className="text-slate-500">Signals:</strong> {signals}
-          </span>
-      </div>
+      {signals && (
+        <div className="pt-2 border-t border-white/[0.04]">
+          <p className="text-[11px] text-slate-400 font-mono leading-relaxed">{signals}</p>
+        </div>
+      )}
     </div>
   );
 }

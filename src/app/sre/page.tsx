@@ -13,13 +13,10 @@ import {
   Sparkles,
   ServerCog,
   Flame,
-  Zap,
   ArrowRight,
 } from "lucide-react";
 import { useIdentity } from "@/components/identity/IdentityProvider";
-import { StatusBadge } from "@/components/common/StatusBadge";
 import { StatCard } from "@/components/common/StatCard";
-import { BurnRateBadge } from "@/components/sre/BurnRateBadge";
 import type { SREExecutiveHealth } from "@/modules/sre/types";
 
 export default function SreHealthPage() {
@@ -182,7 +179,7 @@ export default function SreHealthPage() {
                             href={`/services/${svc.serviceId}`}
                             className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1.5"
                           >
-                            {svc.name}
+                            {svc.serviceName}
                             <ArrowUpRight size={16} className="opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all text-cyan-400" />
                           </Link>
                           <span
@@ -198,7 +195,7 @@ export default function SreHealthPage() {
                         </div>
                         <p className="text-xs text-slate-300 font-medium mt-2.5 flex items-center gap-2">
                           <span className="text-slate-400">Primary degradation factor:</span>
-                          <span className="text-amber-300 font-semibold">{svc.reason}</span>
+                          <span className="text-amber-300 font-semibold">{svc.primaryDegradationFactor}</span>
                         </p>
                       </div>
 
@@ -213,8 +210,8 @@ export default function SreHealthPage() {
                           </div>
                           <div className="flex items-center gap-1.5 font-mono">
                             <span className="text-slate-400 text-[11px] uppercase">Error Budget:</span>
-                            <span className={`font-bold ${svc.remainingErrorBudget < 15 ? "text-rose-400" : "text-amber-400"}`}>
-                              {svc.remainingErrorBudget.toFixed(1)}%
+                            <span className={`font-bold ${svc.errorBudgetPercent < 15 ? "text-rose-400" : "text-amber-400"}`}>
+                              {svc.errorBudgetPercent.toFixed(1)}%
                             </span>
                           </div>
                         </div>

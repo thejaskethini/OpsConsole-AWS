@@ -141,7 +141,7 @@ export default function HistoryPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] text-cyan-500/70 group-hover:text-cyan-400 font-medium transition-colors">
-                        {isExpanded ? "Collapse" : "Investigate"}
+                        {isExpanded ? "Collapse" : "View Details"}
                     </span>
                     {isExpanded ? <ChevronUp size={14} className="text-slate-600" /> : <ChevronDown size={14} className="text-slate-600" />}
                 </div>

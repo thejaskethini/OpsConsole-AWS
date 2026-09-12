@@ -203,7 +203,7 @@ export default function SreHealthPage() {
                           href={`/services/${svc.serviceId}`}
                           className="px-3 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] text-xs font-semibold text-cyan-300 border border-white/[0.08] transition-colors"
                         >
-                          Investigate →
+                          View Service →
                         </Link>
                       </div>
                     </div>

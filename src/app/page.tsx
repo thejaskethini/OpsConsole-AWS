@@ -118,33 +118,53 @@ function StatCard({
   );
 }
 
-/* ─── Premium Cost Chart (dual: daily bars + cumulative line) ────── */
-function CostChart({
+/* ─── Polished Cost Trend Chart (Daily Spend / Cumulative Toggle) ─── */
+function CostTrendChart({
   data,
   avgPerDay,
+  viewMode,
 }: {
   data: { date: string; amount: number; cumulative: number }[];
   avgPerDay: number;
+  viewMode: "daily" | "cumulative";
 }) {
-  if (!data || data.length === 0)
-    return <p className="text-slate-600 text-xs text-center py-8">No data</p>;
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
-  const w = 720,
-    h = 240;
-  const pad = { t: 20, r: 24, b: 40, l: 60 };
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-slate-500 text-xs font-mono">
+        No telemetry available for selected window
+      </div>
+    );
+  }
+
+  const w = 680;
+  const h = 210;
+  const pad = { t: 16, r: 20, b: 32, l: 56 };
   const plotW = w - pad.l - pad.r;
   const plotH = h - pad.t - pad.b;
 
-  const maxDaily = Math.max(...data.map((d) => d.amount), 0.01);
-  const maxCumulative = Math.max(...data.map((d) => d.cumulative), 0.01);
-  const barW = Math.max(4, (plotW / data.length) * 0.6);
+  const isDaily = viewMode === "daily";
+  const maxVal = isDaily
+    ? Math.max(...data.map((d) => d.amount), avgPerDay * 1.2, 100)
+    : Math.max(...data.map((d) => d.cumulative), 100);
 
-  const bx = (i: number) => pad.l + (i + 0.5) * (plotW / data.length);
-  const by = (v: number) => pad.t + plotH - (v / maxDaily) * plotH;
-  const cx = bx;
-  const cy = (v: number) => pad.t + plotH - (v / maxCumulative) * plotH;
+  // Y-axis tick intervals
+  const yTicks = [0, 0.33, 0.66, 1].map((f) => {
+    const raw = maxVal * f;
+    return {
+      val: raw >= 1000 ? `$${(raw / 1000).toFixed(1)}k` : `$${Math.round(raw)}`,
+      y: pad.t + plotH - f * plotH,
+    };
+  });
 
-  const cumPoints = data.map((d, i) => ({ x: cx(i), y: cy(d.cumulative) }));
+  const getX = (i: number) => pad.l + (i + 0.5) * (plotW / data.length);
+  const getY = (v: number) => pad.t + plotH - (v / maxVal) * plotH;
+  const barW = Math.max(6, Math.min(22, (plotW / data.length) * 0.55));
+  const avgY = getY(avgPerDay);
+
+  // Cumulative line points
+  const cumPoints = data.map((d, i) => ({ x: getX(i), y: getY(d.cumulative), ...d }));
   const cumPath = cumPoints
     .map((p, i) => {
       if (i === 0) return `M${p.x},${p.y}`;
@@ -153,227 +173,334 @@ function CostChart({
       return `C${mx},${prev.y} ${mx},${p.y} ${p.x},${p.y}`;
     })
     .join(" ");
-  const cumAreaPath =
-    cumPath +
-    ` L${cumPoints[cumPoints.length - 1].x},${pad.t + plotH} L${cumPoints[0].x},${pad.t + plotH} Z`;
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => ({
-    val: `$${(maxDaily * f).toFixed(0)}`,
-    y: pad.t + plotH - f * plotH,
-  }));
-
-  const avgY = by(avgPerDay);
+  const hoveredItem = hoveredIdx !== null ? data[hoveredIdx] : null;
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto">
-      <defs>
-        <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.7" />
-          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.1" />
-        </linearGradient>
-        <linearGradient id="cumAreaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="cumLineGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#8b5cf6" />
-        </linearGradient>
-        <filter id="barGlow">
-          <feGaussianBlur stdDeviation="2" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id="lineGlow">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
+    <div className="relative w-full select-none">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="w-full h-auto overflow-visible"
+        onMouseLeave={() => setHoveredIdx(null)}
+      >
+        <defs>
+          <linearGradient id="costBarGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#0284c7" stopOpacity="0.4" />
+          </linearGradient>
+          <linearGradient id="costBarHoverGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22d3ee" stopOpacity="1" />
+            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.75" />
+          </linearGradient>
+          <linearGradient id="cumLineFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
 
-      {/* Grid lines */}
-      {yTicks.map((t, i) => (
-        <g key={i}>
-          <line
-            x1={pad.l}
-            y1={t.y}
-            x2={w - pad.r}
-            y2={t.y}
-            stroke="rgba(148,163,184,0.06)"
-            strokeWidth={1}
-            strokeDasharray="4 4"
-          />
-          <text
-            x={pad.l - 8}
-            y={t.y + 3}
-            textAnchor="end"
-            fill="#475569"
-            fontSize={8}
-            fontFamily="JetBrains Mono, monospace"
-          >
-            {t.val}
-          </text>
-        </g>
-      ))}
-
-      {/* Average line (dashed) */}
-      {avgPerDay > 0 && (
-        <>
-          <line
-            x1={pad.l}
-            y1={avgY}
-            x2={w - pad.r}
-            y2={avgY}
-            stroke="#f59e0b"
-            strokeWidth={1}
-            strokeDasharray="6 3"
-            opacity={0.5}
-          />
-          <text
-            x={w - pad.r + 4}
-            y={avgY + 3}
-            fill="#f59e0b"
-            fontSize={7}
-            fontFamily="JetBrains Mono, monospace"
-          >
-            avg
-          </text>
-        </>
-      )}
-
-      {/* Daily bars */}
-      {data.map((d, i) => {
-        const x = bx(i);
-        const barHeight = (d.amount / maxDaily) * plotH;
-        return (
+        {/* Horizontal grid lines */}
+        {yTicks.map((t, i) => (
           <g key={i}>
-            <rect
-              x={x - barW / 2 + 1}
-              y={by(d.amount) + 2}
-              width={barW}
-              height={barHeight}
-              fill="#06b6d4"
-              opacity={0.08}
-              rx={2}
+            <line
+              x1={pad.l}
+              y1={t.y}
+              x2={w - pad.r}
+              y2={t.y}
+              stroke="rgba(255,255,255,0.05)"
+              strokeWidth={1}
+              strokeDasharray={i === 0 ? "none" : "3 3"}
             />
-            <rect
-              x={x - barW / 2}
-              y={by(d.amount)}
-              width={barW}
-              height={barHeight}
-              fill="url(#barGrad)"
-              rx={3}
-              filter="url(#barGlow)"
-            />
-            {(data.length <= 16 || i % 3 === 0) && (
-              <text
-                x={x}
-                y={pad.t + plotH + 14}
-                textAnchor="middle"
-                fill="#475569"
-                fontSize={7}
-                fontFamily="JetBrains Mono, monospace"
-              >
-                {new Date(d.date + "T00:00:00").toLocaleDateString("en", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </text>
-            )}
+            <text
+              x={pad.l - 8}
+              y={t.y + 3.5}
+              textAnchor="end"
+              fill="#64748b"
+              fontSize={10}
+              fontFamily="JetBrains Mono, monospace"
+              fontWeight={500}
+            >
+              {t.val}
+            </text>
           </g>
-        );
-      })}
+        ))}
 
-      {/* Cumulative area */}
-      <path d={cumAreaPath} fill="url(#cumAreaGrad)" />
+        {/* Subtle Average Daily Spend Reference Line (Daily view only) */}
+        {isDaily && avgPerDay > 0 && (
+          <g>
+            <line
+              x1={pad.l}
+              y1={avgY}
+              x2={w - pad.r}
+              y2={avgY}
+              stroke="rgba(245, 158, 11, 0.4)"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+            />
+            <text
+              x={w - pad.r - 2}
+              y={avgY - 4}
+              textAnchor="end"
+              fill="rgba(245, 158, 11, 0.7)"
+              fontSize={9}
+              fontFamily="JetBrains Mono, monospace"
+            >
+              avg ${Math.round(avgPerDay)}
+            </text>
+          </g>
+        )}
 
-      {/* Cumulative line */}
-      <path
-        d={cumPath}
-        fill="none"
-        stroke="url(#cumLineGrad)"
-        strokeWidth={2.5}
-        filter="url(#lineGlow)"
-      />
+        {/* Primary Visualization: DAILY BARS */}
+        {isDaily &&
+          data.map((d, i) => {
+            const cx = getX(i);
+            const cy = getY(d.amount);
+            const barH = pad.t + plotH - cy;
+            const isHovered = hoveredIdx === i;
 
-      {/* Cumulative dots */}
-      {cumPoints.map((p, i) => (
-        <circle
-          key={i}
-          cx={p.x}
-          cy={p.y}
-          r={3}
-          fill="#0a0f1a"
-          stroke="#8b5cf6"
-          strokeWidth={2}
-        />
-      ))}
+            return (
+              <g
+                key={d.date}
+                className="cursor-pointer"
+                onMouseEnter={() => setHoveredIdx(i)}
+              >
+                {/* Invisible hit box for easier hover targeting */}
+                <rect
+                  x={cx - plotW / data.length / 2}
+                  y={pad.t}
+                  width={plotW / data.length}
+                  height={plotH}
+                  fill="transparent"
+                />
+                {/* Active bar background highlight on hover */}
+                {isHovered && (
+                  <rect
+                    x={cx - plotW / data.length / 2 + 1}
+                    y={pad.t}
+                    width={plotW / data.length - 2}
+                    height={plotH}
+                    fill="rgba(255,255,255,0.03)"
+                    rx={4}
+                  />
+                )}
+                {/* Bar */}
+                <rect
+                  x={cx - barW / 2}
+                  y={cy}
+                  width={barW}
+                  height={Math.max(2, barH)}
+                  rx={2.5}
+                  fill={isHovered ? "url(#costBarHoverGradient)" : "url(#costBarGradient)"}
+                  className="transition-colors duration-150"
+                />
+              </g>
+            );
+          })}
 
-      {/* Legend */}
-      <g transform={`translate(${pad.l}, ${h - 8})`}>
-        <rect x={0} y={-6} width={10} height={6} fill="#06b6d4" rx={1} opacity={0.7} />
-        <text x={13} y={0} fill="#64748b" fontSize={7} fontFamily="JetBrains Mono, monospace">
-          Daily Spend
-        </text>
-        <line x1={80} y1={-3} x2={90} y2={-3} stroke="#8b5cf6" strokeWidth={2} />
-        <circle cx={85} cy={-3} r={2} fill="#0a0f1a" stroke="#8b5cf6" strokeWidth={1.5} />
-        <text x={93} y={0} fill="#64748b" fontSize={7} fontFamily="JetBrains Mono, monospace">
-          Cumulative Total
-        </text>
-        <line
-          x1={190}
-          y1={-3}
-          x2={200}
-          y2={-3}
-          stroke="#f59e0b"
-          strokeWidth={1}
-          strokeDasharray="4 2"
-          opacity={0.7}
-        />
-        <text x={203} y={0} fill="#64748b" fontSize={7} fontFamily="JetBrains Mono, monospace">
-          Avg/Day
-        </text>
-      </g>
-    </svg>
+        {/* Primary Visualization: CUMULATIVE LINE */}
+        {!isDaily && (
+          <g>
+            <path
+              d={`${cumPath} L${cumPoints[cumPoints.length - 1].x},${pad.t + plotH} L${cumPoints[0].x},${pad.t + plotH} Z`}
+              fill="url(#cumLineFill)"
+            />
+            <path
+              d={cumPath}
+              fill="none"
+              stroke="#06b6d4"
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {cumPoints.map((p, i) => {
+              const isHovered = hoveredIdx === i;
+              return (
+                <g
+                  key={p.date}
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoveredIdx(i)}
+                >
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={isHovered ? 5 : 3}
+                    fill="#0c1322"
+                    stroke={isHovered ? "#22d3ee" : "#06b6d4"}
+                    strokeWidth={isHovered ? 2.5 : 1.5}
+                    className="transition-all duration-150"
+                  />
+                  <rect
+                    x={p.x - plotW / data.length / 2}
+                    y={pad.t}
+                    width={plotW / data.length}
+                    height={plotH}
+                    fill="transparent"
+                  />
+                </g>
+              );
+            })}
+          </g>
+        )}
+
+        {/* X-axis date labels (clean, uncluttered sampling) */}
+        {data.map((d, i) => {
+          const step = data.length > 20 ? 4 : data.length > 10 ? 2 : 1;
+          const showLabel = i % step === 0 || i === data.length - 1;
+          if (!showLabel) return null;
+
+          const cx = getX(i);
+          const dateObj = new Date(d.date + "T00:00:00");
+          const label = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+          return (
+            <text
+              key={d.date}
+              x={cx}
+              y={pad.t + plotH + 18}
+              textAnchor="middle"
+              fill={hoveredIdx === i ? "#38bdf8" : "#64748b"}
+              fontSize={10}
+              fontFamily="JetBrains Mono, monospace"
+              fontWeight={hoveredIdx === i ? 600 : 400}
+            >
+              {label}
+            </text>
+          );
+        })}
+      </svg>
+
+      {/* Floating Hover Tooltip */}
+      {hoveredItem && (
+        <div
+          className="absolute z-20 pointer-events-none transition-all duration-75 transform -translate-x-1/2"
+          style={{
+            left: `${((getX(hoveredIdx!) / w) * 100).toFixed(1)}%`,
+            top: "8px",
+          }}
+        >
+          <div className="bg-[#0c1322]/95 border border-white/[0.12] shadow-xl shadow-black/60 rounded-lg px-3 py-1.5 backdrop-blur-md text-[11px] whitespace-nowrap">
+            <p className="text-slate-400 font-mono text-[10px]">
+              {new Date(hoveredItem.date + "T00:00:00").toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-cyan-400 font-mono font-bold text-xs">
+                ${hoveredItem.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-slate-500 font-mono text-[10px]">
+                (Cum: ${Math.round(hoveredItem.cumulative).toLocaleString("en-US")})
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-/* ─── Top Services Chart ───────────────────────────────────────────── */
-function TopServicesChart({
+/* ─── Compact Ranked Top Cost Drivers ─────────────────────────────── */
+function TopCostDriversCard({
   services,
+  rdsBreakdown,
+  totalSpend,
 }: {
   services: { service: string; total: number }[];
+  rdsBreakdown: { id: string; amount: number }[];
+  totalSpend: number;
 }) {
-  if (services.length === 0) return null;
-  const maxVal = services[0]?.total || 1;
-  const barColors = ["#06b6d4", "#8b5cf6", "#f43f5e", "#f97316", "#10b981", "#eab308"];
+  if (!services || services.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-slate-500 text-xs font-mono">
+        No cost driver breakdown available
+      </div>
+    );
+  }
+
+  const topCategories = services.slice(0, 5);
+  const maxCategorySpend = Math.max(...topCategories.map((s) => s.total), 1);
+  const totalDenom = totalSpend > 0 ? totalSpend : services.reduce((acc, s) => acc + s.total, 0) || 1;
+
   return (
-    <div className="flex flex-col gap-3">
-      {services.slice(0, 6).map((s, i) => (
-        <div key={s.service} className="flex items-center gap-3 text-[11px]">
-          <span className="text-slate-500 w-40 truncate text-right shrink-0 font-medium">
-            {s.service.replace("Amazon ", "").replace("AWS ", "")}
-          </span>
-          <div className="flex-1 h-2 bg-white/[0.03] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-1000 ease-out"
-              style={{
-                width: `${(s.total / maxVal) * 100}%`,
-                background: `linear-gradient(90deg, ${barColors[i % barColors.length]}, ${
-                  barColors[i % barColors.length]
-                }80)`,
-              }}
-            />
+    <div className="flex flex-col justify-between h-full space-y-4">
+      {/* Ranked Category Bars */}
+      <div className="space-y-2.5">
+        {topCategories.map((s, i) => {
+          const cleanName = s.service
+            .replace(/^Amazon\s+/i, "")
+            .replace(/^AWS\s+/i, "");
+          const pctOfTotal = ((s.total / totalDenom) * 100).toFixed(1);
+          const barPct = Math.min(100, Math.max(4, (s.total / maxCategorySpend) * 100));
+
+          return (
+            <div key={s.service} className="group">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  <span className="text-[10px] font-mono font-bold text-slate-500 w-4">
+                    #{i + 1}
+                  </span>
+                  <span
+                    className="text-slate-200 font-medium truncate text-[11.5px]"
+                    title={s.service}
+                  >
+                    {cleanName}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 font-mono-brand">
+                  <span className="text-slate-400 text-[10.5px]">
+                    {pctOfTotal}%
+                  </span>
+                  <span className="text-white font-semibold text-xs">
+                    ${s.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-700 ease-out"
+                  style={{ width: `${barPct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* RDS Breakdown Sub-section (if present) */}
+      {rdsBreakdown && rdsBreakdown.length > 0 && (
+        <div className="pt-3 border-t border-white/[0.06] space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Database size={11} className="text-blue-400" />
+              RDS Instance Allocation
+            </span>
+            <span className="text-[10px] font-mono text-slate-500">
+              Top {Math.min(3, rdsBreakdown.length)}
+            </span>
           </div>
-          <span className="text-slate-300 font-mono-brand w-16 text-right shrink-0 font-medium">
-            ${s.total.toFixed(2)}
-          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {rdsBreakdown.slice(0, 2).map((r) => {
+              const name = r.id.split(":").pop()?.split("/").pop() || r.id;
+              return (
+                <div
+                  key={r.id}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-between text-[11px]"
+                >
+                  <span className="text-slate-400 truncate max-w-[110px] font-mono text-[10px]" title={r.id}>
+                    {name}
+                  </span>
+                  <span className="text-slate-200 font-mono-brand font-medium">
+                    ${r.amount.toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -410,6 +537,7 @@ export default function Dashboard() {
   const [topServices, setTopServices] = useState<{ service: string; total: number }[]>([]);
   const [rdsBreakdown, setRdsBreakdown] = useState<{ id: string; amount: number }[]>([]);
   const [costLoading, setCostLoading] = useState(true);
+  const [costViewMode, setCostViewMode] = useState<"daily" | "cumulative">("daily");
   const [metrics, setMetrics] = useState<any>(null);
   const [metricsLoading, setMetricsLoading] = useState(true);
 
@@ -659,7 +787,7 @@ export default function Dashboard() {
                             href={`/services/${d.serviceId}`}
                             className="px-3 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] text-xs font-semibold text-cyan-300 border border-white/[0.08] transition-colors shrink-0"
                           >
-                            Investigate →
+                            View Service →
                           </Link>
                         </div>
 
@@ -854,94 +982,130 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Cost Overview Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          {/* Cost chart */}
-          <div className="lg:col-span-3 glass-card rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-white font-semibold text-[13px] flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
-                    <DollarSign size={12} className="text-cyan-400" />
-                  </div>
-                  Cost Trend — Daily + Cumulative
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5 ml-8">
-                  Last 15 completed days · All figures from AWS Cost Explorer
-                </p>
-              </div>
-              {!costLoading && costStats && (
-                <div className="text-right">
-                  <p className="text-cyan-400 font-bold text-2xl font-mono-brand">
-                    ${costStats.totalSpend.toFixed(2)}
+        {/* Cost Overview Grid — Balanced Two-Column Operational Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* Left: Daily Spend Trend / Cost Overview */}
+          <div className="lg:col-span-7 glass-card rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              {/* Card Header & View Toggle */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-white font-semibold text-[13.5px] flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
+                      <DollarSign size={13} className="text-cyan-400" />
+                    </div>
+                    {costViewMode === "daily" ? "Daily AWS Spend" : "Cumulative AWS Spend"}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5 ml-8">
+                    15 completed days · AWS Cost Explorer telemetry
                   </p>
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest">{costStats.days}-day total</p>
-                  <p className="text-[9px] text-amber-400/80 mt-0.5">${costStats.avgPerDay.toFixed(2)}/day avg</p>
+                </div>
+
+                {/* View Mode Toggle: Daily Spend | Cumulative */}
+                <div className="inline-flex p-0.5 rounded-lg bg-white/[0.04] border border-white/[0.06] shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setCostViewMode("daily")}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                      costViewMode === "daily"
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Daily Spend
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCostViewMode("cumulative")}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                      costViewMode === "cumulative"
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Cumulative
+                  </button>
+                </div>
+              </div>
+
+              {/* KPI Summary Strip */}
+              {!costLoading && costStats && (
+                <div className="grid grid-cols-3 gap-3 p-3 mb-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Cumulative Spend</p>
+                    <p className="text-base font-bold text-cyan-400 font-mono-brand mt-0.5">
+                      ${costStats.totalSpend.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Average / Day</p>
+                    <p className="text-base font-bold text-amber-400 font-mono-brand mt-0.5">
+                      ${costStats.avgPerDay.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Latest Completed</p>
+                    <p className="text-base font-bold text-slate-200 font-mono-brand mt-0.5">
+                      ${(costData[costData.length - 1]?.amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
-            {costLoading ? (
-              <div className="flex items-center justify-center py-16 gap-2 text-slate-600 text-sm">
-                <Loader size={14} className="animate-spin text-cyan-400" /> Loading cost data…
-              </div>
-            ) : (
-              <CostChart data={costData} avgPerDay={costStats?.avgPerDay ?? 0} />
-            )}
-          </div>
 
-          {/* Right panel: Top Services + RDS Breakdown */}
-          <div className="lg:col-span-2 flex flex-col gap-5">
-            {/* Top Services */}
-            <div className="glass-card rounded-2xl p-5 flex-1">
-              <h3 className="text-white font-semibold text-[13px] mb-4 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-violet-500/10 flex items-center justify-center">
-                  <TrendingDown size={12} className="text-violet-400" />
-                </div>
-                Top Services Spend
-              </h3>
+            {/* Chart */}
+            <div className="flex-1 flex flex-col justify-center">
               {costLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader size={14} className="animate-spin text-cyan-400" />
+                <div className="flex items-center justify-center py-16 gap-2 text-slate-500 text-xs">
+                  <Loader size={14} className="animate-spin text-cyan-400" /> Loading AWS cost telemetry…
                 </div>
               ) : (
-                <TopServicesChart services={topServices} />
+                <CostTrendChart
+                  data={costData}
+                  avgPerDay={costStats?.avgPerDay ?? 0}
+                  viewMode={costViewMode}
+                />
               )}
             </div>
+          </div>
 
-            {/* RDS Breakdown */}
-            {rdsBreakdown.length > 0 && (
-              <div className="glass-card rounded-2xl p-5">
-                <h3 className="text-white font-semibold text-[13px] mb-3 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center">
-                    <Database size={12} className="text-blue-400" />
-                  </div>
-                  RDS Instance Spend
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {rdsBreakdown.slice(0, 4).map((r) => {
-                    const name = r.id.split(":").pop()?.split("/").pop() || r.id;
-                    return (
-                      <div key={r.id} className="flex items-center gap-3 text-[10px]">
-                        <span className="text-slate-400 w-28 truncate text-right shrink-0 font-medium" title={r.id}>
-                          {name}
-                        </span>
-                        <div className="flex-1 h-1.5 bg-white/[0.03] rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-blue-500 to-cyan-400"
-                            style={{
-                              width: `${(r.amount / Math.max(...rdsBreakdown.map((x) => x.amount), 0.01)) * 100}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-slate-300 font-mono-brand w-14 text-right shrink-0">
-                          ${r.amount.toFixed(2)}
-                        </span>
-                      </div>
-                    );
-                  })}
+          {/* Right: Top Cost Drivers */}
+          <div className="lg:col-span-5 glass-card rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-white font-semibold text-[13.5px] flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-violet-500/10 flex items-center justify-center">
+                      <TrendingDown size={13} className="text-violet-400" />
+                    </div>
+                    Top Cost Drivers
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5 ml-8">
+                    Ranked by 15-day aggregate spend
+                  </p>
                 </div>
+                {!costLoading && (
+                  <span className="text-[10.5px] font-mono text-slate-500 font-medium">
+                    {topServices.length} categories
+                  </span>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Drivers list */}
+            <div className="flex-1 flex flex-col justify-center">
+              {costLoading ? (
+                <div className="flex items-center justify-center py-16 gap-2 text-slate-500 text-xs">
+                  <Loader size={14} className="animate-spin text-cyan-400" /> Loading category breakdown…
+                </div>
+              ) : (
+                <TopCostDriversCard
+                  services={topServices}
+                  rdsBreakdown={rdsBreakdown}
+                  totalSpend={costStats?.totalSpend ?? 0}
+                />
+              )}
+            </div>
           </div>
         </div>
 

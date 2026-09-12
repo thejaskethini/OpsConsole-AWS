@@ -8,7 +8,7 @@ import {
   Clock, ChevronRight, ChevronDown, Globe, Lock, Eye, EyeOff,
   Loader2, GitBranch, Cpu, Radio, HardDrive, Layers,
   Wifi, BarChart2, FlaskConical, Users, Settings, Building2,
-  Activity, Target, ServerCog,
+  Activity, Target, ServerCog, Bell, Cloud,
 } from "lucide-react";
 import { RegionProvider, useRegion } from "@/components/RegionProvider";
 import { IdentityProvider } from "@/components/identity/IdentityProvider";
@@ -16,56 +16,108 @@ import { WorkspaceSwitcher } from "@/components/identity/WorkspaceSwitcher";
 import { EnvironmentSwitcher } from "@/components/identity/EnvironmentSwitcher";
 import { UserMenu } from "@/components/identity/UserMenu";
 
-const navItems = [
-  // ── Observe ────────────────────────────────────────
-  { href: "/",               icon: LayoutDashboard, label: "Overview",          group: "observe" },
-  { href: "/services",       icon: ServerCog,        label: "Services",          group: "observe" },
-  { href: "/infrastructure", icon: Network,          label: "Infrastructure Map",group: "observe" },
-  { href: "/cloudwatch",     icon: BarChart2,        label: "Metrics & Logs",    group: "observe" },
+/* ─── Target Information Architecture Definition ───────────────────── */
 
-  // ── Reliability (SRE) ──────────────────────────────
-  { href: "/sre",            icon: Activity,         label: "SRE Health",        group: "reliability" },
-  { href: "/slos",           icon: Target,           label: "SLOs & Error Budget",group: "reliability" },
-  { href: "/history",        icon: Clock,            label: "Failure History",   group: "reliability" },
+interface NavItemDef {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  badge?: string;
+}
 
-  // ── Cloud Compute & Data ───────────────────────────
-  { href: "/ec2",            icon: Server,           label: "EC2 Instances",     group: "compute" },
-  { href: "/ecs",            icon: Container,        label: "ECS Clusters",      group: "compute" },
-  { href: "/elasticache",    icon: Zap,              label: "ElastiCache",       group: "compute" },
-  { href: "/lambda",         icon: Cpu,              label: "Lambda Functions",  group: "compute" },
-  { href: "/rds",            icon: Database,         label: "RDS Databases",     group: "data" },
-  { href: "/s3",             icon: Box,              label: "S3 Storage",        group: "data" },
-  { href: "/dynamodb",       icon: Layers,           label: "DynamoDB",          group: "data" },
+interface AwsCategoryDef {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  items: NavItemDef[];
+}
 
-  // ── Networking & DevTools ──────────────────────────
-  { href: "/alb",            icon: ArrowRightLeft,   label: "Load Balancers",    group: "networking" },
-  { href: "/cloudfront",     icon: Wifi,             label: "CloudFront",        group: "networking" },
-  { href: "/route53",        icon: Radio,            label: "Route 53",          group: "networking" },
-  { href: "/amplify",        icon: GitBranch,        label: "Amplify",           group: "devtools" },
-  { href: "/codepipeline",   icon: HardDrive,        label: "CodePipeline",      group: "devtools" },
-
-  // ── Cloud Operations & Governance ──────────────────
-  { href: "/cost",           icon: DollarSign,       label: "Cost Monitoring",   group: "ops" },
-  { href: "/optimization",   icon: TrendingDown,     label: "Optimization",      group: "ops" },
-  { href: "/security",       icon: Shield,           label: "Security",          group: "ops" },
-  { href: "/waste",          icon: Trash2,           label: "Waste",             group: "ops" },
-  { href: "/sagemaker",      icon: FlaskConical,     label: "SageMaker",         group: "ops" },
-
-  // ── Platform & Workspace ───────────────────────────
-  { href: "/workspace",      icon: Building2,        label: "Workspace",         group: "platform" },
-  { href: "/members",        icon: Users,            label: "Members",           group: "platform" },
-  { href: "/settings",       icon: Settings,         label: "Settings",          group: "platform" },
+const homeNavItems: NavItemDef[] = [
+  { href: "/", icon: LayoutDashboard, label: "Overview" },
 ];
 
-const navGroups: { key: string; label: string }[] = [
-  { key: "observe",     label: "Observe" },
-  { key: "reliability", label: "Reliability" },
-  { key: "compute",     label: "Compute" },
-  { key: "data",        label: "Storage & Data" },
-  { key: "networking",  label: "Networking" },
-  { key: "devtools",    label: "Developer Tools" },
-  { key: "ops",         label: "Operations" },
-  { key: "platform",    label: "Platform" },
+const observeNavItems: NavItemDef[] = [
+  { href: "/services", icon: ServerCog, label: "Services" },
+  { href: "/infrastructure", icon: Network, label: "Infrastructure" },
+];
+
+const reliabilityNavItems: NavItemDef[] = [
+  { href: "/sre", icon: Activity, label: "SRE Health" },
+  { href: "/slos", icon: Target, label: "SLOs & Error Budgets" },
+  { href: "/alerts", icon: Bell, label: "Alerts" },
+  { href: "/history", icon: Clock, label: "Failure History" },
+];
+
+const awsCategories: AwsCategoryDef[] = [
+  {
+    key: "compute",
+    label: "Compute",
+    icon: Cpu,
+    items: [
+      { href: "/ec2", icon: Server, label: "EC2" },
+      { href: "/ecs", icon: Container, label: "ECS" },
+      { href: "/lambda", icon: Zap, label: "Lambda" },
+      { href: "/elasticache", icon: Cpu, label: "ElastiCache" },
+    ],
+  },
+  {
+    key: "data",
+    label: "Data",
+    icon: Database,
+    items: [
+      { href: "/rds", icon: Database, label: "RDS" },
+      { href: "/dynamodb", icon: Layers, label: "DynamoDB" },
+      { href: "/s3", icon: Box, label: "S3" },
+    ],
+  },
+  {
+    key: "networking",
+    label: "Networking",
+    icon: ArrowRightLeft,
+    items: [
+      { href: "/alb", icon: ArrowRightLeft, label: "Load Balancers" },
+      { href: "/cloudfront", icon: Wifi, label: "CloudFront" },
+      { href: "/route53", icon: Radio, label: "Route 53" },
+    ],
+  },
+  {
+    key: "developer",
+    label: "Developer",
+    icon: GitBranch,
+    items: [
+      { href: "/amplify", icon: GitBranch, label: "Amplify" },
+      { href: "/codepipeline", icon: HardDrive, label: "CodePipeline" },
+    ],
+  },
+  {
+    key: "observability",
+    label: "Observability",
+    icon: BarChart2,
+    items: [
+      { href: "/cloudwatch", icon: BarChart2, label: "CloudWatch" },
+    ],
+  },
+  {
+    key: "aiml",
+    label: "AI / ML",
+    icon: FlaskConical,
+    items: [
+      { href: "/sagemaker", icon: FlaskConical, label: "SageMaker" },
+    ],
+  },
+];
+
+const cloudDirectNavItems: NavItemDef[] = [
+  { href: "/cost", icon: DollarSign, label: "Cost" },
+  { href: "/optimization", icon: TrendingDown, label: "Optimization" },
+  { href: "/security", icon: Shield, label: "Security" },
+  { href: "/waste", icon: Trash2, label: "Waste" },
+];
+
+const platformNavItems: NavItemDef[] = [
+  { href: "/workspace", icon: Building2, label: "Workspace" },
+  { href: "/members", icon: Users, label: "Members" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 /* ── Region Selector ─────────────────────────────────────────────── */
@@ -127,26 +179,129 @@ function RegionSelector() {
   );
 }
 
-/* ── Nav Link ────────────────────────────────────────────────────── */
+/* ── Standard Nav Link ───────────────────────────────────────────── */
 function NavLink({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
   return (
     <Link
       href={href}
-      className={`group relative flex items-center gap-2.5 px-3 py-[9px] rounded-xl text-[12.5px] font-medium transition-all duration-200 ${
+      className={`group relative flex items-center gap-2.5 px-3 py-[8px] rounded-xl text-[12px] font-medium transition-all duration-200 ${
         isActive
-          ? "bg-gradient-to-r from-cyan-500/[0.12] to-transparent text-white"
-          : "text-slate-500 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/[0.08] hover:to-transparent"
+          ? "bg-gradient-to-r from-cyan-500/[0.14] to-transparent text-white font-semibold"
+          : "text-slate-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/[0.06] hover:to-transparent"
       }`}
     >
-      <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 ${isActive ? "bg-cyan-500/15" : "bg-white/[0.03] group-hover:bg-cyan-500/10"}`}>
-        <Icon size={13} className={`shrink-0 transition-colors duration-200 ${isActive ? "text-cyan-400" : "group-hover:text-cyan-400"}`} />
+      <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-200 ${isActive ? "bg-cyan-500/20 text-cyan-300" : "bg-white/[0.03] group-hover:bg-cyan-500/10 text-slate-400 group-hover:text-cyan-400"}`}>
+        <Icon size={13} className="shrink-0 transition-colors duration-200" />
       </div>
       <span className="flex-1 truncate">{label}</span>
-      {isActive && <div className="w-1 h-4 rounded-full bg-cyan-400 absolute left-0" />}
-      <ChevronRight size={12} className={`transition-all duration-200 shrink-0 ${isActive ? "opacity-50 text-cyan-400" : "opacity-0 group-hover:opacity-50 -translate-x-1 group-hover:translate-x-0"}`} />
+      {isActive && <div className="w-1 h-3.5 rounded-full bg-cyan-400 absolute left-0" />}
+      <ChevronRight size={11} className={`transition-all duration-200 shrink-0 ${isActive ? "opacity-60 text-cyan-400" : "opacity-0 group-hover:opacity-40 -translate-x-1 group-hover:translate-x-0"}`} />
     </Link>
+  );
+}
+
+/* ── Collapsible AWS Provider Navigation Tree ─────────────────────── */
+function AwsCollapsibleNav() {
+  const pathname = usePathname();
+  const allAwsRoutes = awsCategories.flatMap(c => c.items.map(i => i.href));
+  const isAwsActive = allAwsRoutes.some(r => pathname === r || pathname.startsWith(r + "/"));
+
+  const [isOpen, setIsOpen] = useState(true);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({
+    networking: true,
+    developer: true,
+    observability: true,
+    aiml: true,
+  });
+
+  const toggleCategory = (key: string) => {
+    setCollapsedCategories(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <div className="flex flex-col">
+      {/* AWS Group Header Trigger */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`group flex items-center justify-between w-full px-3 py-[7.5px] rounded-xl text-[12px] font-medium transition-all duration-200 cursor-pointer ${
+          isAwsActive
+            ? "bg-white/[0.04] text-white font-semibold"
+            : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-200 ${isAwsActive ? "bg-amber-500/15 text-amber-400" : "bg-white/[0.03] text-slate-400 group-hover:text-amber-400"}`}>
+            <Cloud size={13} className="shrink-0" />
+          </div>
+          <span className="font-semibold tracking-wide truncate">AWS</span>
+          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+            Provider
+          </span>
+        </div>
+        <ChevronDown
+          size={12}
+          className={`text-slate-500 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-0" : "-rotate-90"}`}
+        />
+      </button>
+
+      {/* Nested Collapsible Categories */}
+      {isOpen && (
+        <div className="ml-4 pl-2 border-l border-white/[0.06] flex flex-col gap-1 my-1">
+          {awsCategories.map((cat) => {
+            const hasActiveChild = cat.items.some(i => pathname === i.href || pathname.startsWith(i.href + "/"));
+            const isCatOpen = hasActiveChild || !collapsedCategories[cat.key];
+
+            return (
+              <div key={cat.key} className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(cat.key)}
+                  className={`flex items-center justify-between w-full px-2 py-1 rounded-md text-[10.5px] font-semibold tracking-wide transition-colors cursor-pointer ${
+                    hasActiveChild
+                      ? "text-cyan-300 font-bold"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <cat.icon size={11} className={hasActiveChild ? "text-cyan-400" : "text-slate-500"} />
+                    <span>{cat.label}</span>
+                  </div>
+                  <ChevronDown
+                    size={10}
+                    className={`text-slate-500 transition-transform duration-200 shrink-0 ${isCatOpen ? "rotate-0" : "-rotate-90"}`}
+                  />
+                </button>
+
+                {isCatOpen && (
+                  <div className="flex flex-col gap-0.5 ml-2 pl-2 border-l border-white/[0.04] py-0.5">
+                    {cat.items.map((item) => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`flex items-center gap-2 px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
+                            isActive
+                              ? "bg-cyan-500/15 text-cyan-300 font-semibold border-l-2 border-cyan-400"
+                              : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
+                          }`}
+                        >
+                          <item.icon size={11} className={isActive ? "text-cyan-400" : "text-slate-500"} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -273,7 +428,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <p className="text-white font-semibold text-[14px] leading-none tracking-tight">OpsConsole</p>
-                <p className="text-[9px] text-slate-500 mt-0.5 font-semibold tracking-wider">SRE PLATFORM</p>
+                <p className="text-[10.5px] text-slate-400 mt-0.5 font-medium tracking-wide">SRE PLATFORM</p>
               </div>
             </div>
             {/* Workspace switcher in sidebar brand area */}
@@ -287,18 +442,70 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation — scrollable independently */}
-          <nav className="flex-1 px-2.5 py-4 flex flex-col gap-0.5 overflow-y-auto min-h-0">
-            {navGroups.map((group, gi) => {
-              const items = navItems.filter(n => n.group === group.key);
-              if (items.length === 0) return null;
-              return (
-                <div key={group.key}>
-                  {gi > 0 && <div className="h-px bg-white/[0.04] my-2" />}
-                  <p className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-slate-500 px-3 mb-1.5">{group.label}</p>
-                  {items.map(n => <NavLink key={n.href} {...n} />)}
-                </div>
-              );
-            })}
+          <nav className="flex-1 px-2.5 py-3.5 flex flex-col gap-3 overflow-y-auto min-h-0 select-none">
+            {/* 1. HOME */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
+                Home
+              </p>
+              {homeNavItems.map((n) => (
+                <NavLink key={n.href} {...n} />
+              ))}
+            </div>
+
+            <div className="h-px bg-white/[0.04]" />
+
+            {/* 2. OBSERVE */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
+                Observe
+              </p>
+              {observeNavItems.map((n) => (
+                <NavLink key={n.href} {...n} />
+              ))}
+            </div>
+
+            <div className="h-px bg-white/[0.04]" />
+
+            {/* 3. RELIABILITY */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
+                Reliability
+              </p>
+              {reliabilityNavItems.map((n) => (
+                <NavLink key={n.href} {...n} />
+              ))}
+            </div>
+
+            <div className="h-px bg-white/[0.04]" />
+
+            {/* 4. CLOUD */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
+                Cloud
+              </p>
+              {/* Nested Collapsible AWS Module */}
+              <AwsCollapsibleNav />
+
+              {/* Direct Cloud Operational Items */}
+              <div className="mt-1 flex flex-col gap-0.5">
+                {cloudDirectNavItems.map((n) => (
+                  <NavLink key={n.href} {...n} />
+                ))}
+              </div>
+            </div>
+
+            <div className="h-px bg-white/[0.04]" />
+
+            {/* 5. PLATFORM */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
+                Platform
+              </p>
+              {platformNavItems.map((n) => (
+                <NavLink key={n.href} {...n} />
+              ))}
+            </div>
           </nav>
 
           {/* Footer — status indicator */}
@@ -307,7 +514,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               <span className="relative flex h-1.5 w-1.5">
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
               </span>
-              <span className="text-[10.5px] text-emerald-400 font-medium">Read-only · {region}</span>
+              <span className="text-xs text-emerald-400 font-medium">Telemetry Model · {region}</span>
             </div>
           </div>
         </aside>
@@ -321,10 +528,10 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               <p className="text-[12px] text-slate-400 font-medium">Cloud Observability & SRE Platform</p>
             </div>
             <div className="flex items-center gap-2.5">
-              <div className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-[9.5px] font-bold text-emerald-400 tracking-wider uppercase">Online</span>
+              <div className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+                <span className="text-[11px] font-mono text-cyan-400 tracking-wide font-medium">Simulated Telemetry</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-mono hidden md:block">
+              <span className="text-[11px] text-slate-500 font-mono hidden md:block">
                 {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
               </span>
               {/* User menu in top bar */}
@@ -334,7 +541,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Content */}
           <main className="flex-1 p-6 overflow-y-auto bg-[#090e1a]">
-            {children}
+            <div className="max-w-[1440px] w-full mx-auto space-y-6">
+              {children}
+            </div>
           </main>
         </div>
       </>

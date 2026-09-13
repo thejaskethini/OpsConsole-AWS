@@ -32,6 +32,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   { id: "settings:manage",     resource: "settings",       action: "manage", description: "Manage workspace settings and integrations" },
   { id: "sre:read",            resource: "sre",            action: "read",   description: "View SRE services, SLOs, golden signals, and reliability health" },
   { id: "sre:manage",          resource: "sre",            action: "manage", description: "Manage SRE services, SLO configurations, and reliability policies" },
+  { id: "notifications:read",   resource: "notifications",  action: "read",   description: "View notifications, notification history, rules, and delivery channels" },
+  { id: "notifications:manage", resource: "notifications",  action: "manage", description: "Create, edit, toggle, delete notification rules and manage routing preferences" },
 ];
 
 // ─── All Roles ────────────────────────────────────────────────────────────────
@@ -85,6 +87,8 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "settings:manage",
     "sre:read",
     "sre:manage",
+    "notifications:read",
+    "notifications:manage",
   ],
   admin: [
     "dashboard:read",
@@ -108,6 +112,8 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "settings:manage",
     "sre:read",
     "sre:manage",
+    "notifications:read",
+    "notifications:manage",
   ],
   operator: [
     "dashboard:read",
@@ -129,6 +135,8 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "members:read",
     "sre:read",
     "sre:manage",
+    "notifications:read",
+    "notifications:manage",
   ],
   viewer: [
     "dashboard:read",
@@ -144,6 +152,7 @@ const ROLE_PERMISSIONS: Record<RoleId, PermissionId[]> = {
     "workspace:read",
     "members:read",
     "sre:read",
+    "notifications:read",
   ],
 };
 

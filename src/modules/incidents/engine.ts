@@ -15,6 +15,7 @@ import type {
   CreateIncidentInput,
 } from "./types";
 import type { IncidentRepository } from "./repository";
+import { getNotificationEngine } from "../notifications";
 
 // ─── Valid State Transition Matrix ───────────────────────────────────────────
 
@@ -142,6 +143,25 @@ export class IncidentEngine {
       await this.addNote(workspaceId, environmentId, saved.id, actor, input.initialNote.trim());
     }
 
+    try {
+      const notifEngine = getNotificationEngine();
+      await notifEngine.dispatch({
+        workspaceId,
+        environmentId,
+        eventType: "INCIDENT_CREATED",
+        source: "INCIDENT",
+        sourceId: saved.id,
+        serviceId: saved.affectedServiceIds[0],
+        severity: saved.severity,
+        title: `Incident ${saved.incidentNumber} Declared: ${saved.title}`,
+        message: saved.description || `Incident ${saved.incidentNumber} created with severity ${saved.severity}`,
+        relatedIncidentId: saved.id,
+        relatedAlertId: saved.primaryAlertId,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return saved;
   }
 
@@ -187,6 +207,27 @@ export class IncidentEngine {
         ? `Incident acknowledged by ${actor.name}: ${note}`
         : `Incident acknowledged by ${actor.name}. Triage initiated.`,
     });
+
+    try {
+      const notifEngine = getNotificationEngine();
+      await notifEngine.dispatch({
+        workspaceId,
+        environmentId,
+        eventType: "INCIDENT_ACKNOWLEDGED",
+        source: "INCIDENT",
+        sourceId: updated.id,
+        serviceId: updated.affectedServiceIds[0],
+        severity: updated.severity,
+        title: `Incident Acknowledged: ${updated.incidentNumber}`,
+        message: note
+          ? `Incident ${updated.incidentNumber} acknowledged by ${actor.name}: ${note}`
+          : `Incident ${updated.incidentNumber} acknowledged by ${actor.name}`,
+        relatedIncidentId: updated.id,
+        relatedAlertId: updated.primaryAlertId,
+      });
+    } catch {
+      // Non-blocking
+    }
 
     return updated;
   }
@@ -420,6 +461,25 @@ export class IncidentEngine {
       metadata: { mitigationSummary: mitigationSummary.trim() },
     });
 
+    try {
+      const notifEngine = getNotificationEngine();
+      await notifEngine.dispatch({
+        workspaceId,
+        environmentId,
+        eventType: "INCIDENT_MITIGATED",
+        source: "INCIDENT",
+        sourceId: updated.id,
+        serviceId: updated.affectedServiceIds[0],
+        severity: updated.severity,
+        title: `Incident Mitigated: ${updated.incidentNumber}`,
+        message: `Incident ${updated.incidentNumber} mitigated: ${mitigationSummary.trim()}`,
+        relatedIncidentId: updated.id,
+        relatedAlertId: updated.primaryAlertId,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return updated;
   }
 
@@ -462,6 +522,25 @@ export class IncidentEngine {
       message: `Incident resolved by ${actor.name}: ${resolutionSummary.trim()}`,
       metadata: { resolutionSummary: resolutionSummary.trim() },
     });
+
+    try {
+      const notifEngine = getNotificationEngine();
+      await notifEngine.dispatch({
+        workspaceId,
+        environmentId,
+        eventType: "INCIDENT_RESOLVED",
+        source: "INCIDENT",
+        sourceId: updated.id,
+        serviceId: updated.affectedServiceIds[0],
+        severity: updated.severity,
+        title: `Incident Resolved: ${updated.incidentNumber}`,
+        message: `Incident ${updated.incidentNumber} resolved: ${resolutionSummary.trim()}`,
+        relatedIncidentId: updated.id,
+        relatedAlertId: updated.primaryAlertId,
+      });
+    } catch {
+      // Non-blocking
+    }
 
     return updated;
   }

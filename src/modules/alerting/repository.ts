@@ -23,6 +23,13 @@ import {
   evaluateRuleOnService,
 } from "./engine";
 import { getSRERepository } from "../sre";
+import { getNotificationEngine, type NotificationSeverity } from "../notifications";
+
+function mapAlertSeverityToNotification(sev: string): NotificationSeverity {
+  if (sev === "CRITICAL") return "SEV1";
+  if (sev === "WARNING") return "SEV2";
+  return "SEV3";
+}
 
 export interface AlertRepository {
   // Alerts
@@ -41,6 +48,8 @@ export interface AlertRepository {
 
   // Evaluation
   evaluateAll(workspaceId: string, environmentId: string): Promise<AlertEvaluation[]>;
+
+  reset(): void;
 }
 
 export class LocalAlertRepository implements AlertRepository {
@@ -136,6 +145,25 @@ export class LocalAlertRepository implements AlertRepository {
     this.alerts[index] = updatedAlert;
     this.events.push(event);
 
+    try {
+      const notifEngine = getNotificationEngine();
+      await notifEngine.dispatch({
+        workspaceId,
+        environmentId: updatedAlert.environmentId,
+        eventType: "ALERT_ACKNOWLEDGED",
+        source: "ALERT",
+        sourceId: updatedAlert.id,
+        serviceId: updatedAlert.serviceId,
+        serviceName: updatedAlert.serviceName,
+        severity: mapAlertSeverityToNotification(updatedAlert.severity),
+        title: `Alert Acknowledged: ${updatedAlert.title}`,
+        message: `Alert '${updatedAlert.title}' acknowledged by ${userName || userId}`,
+        relatedAlertId: updatedAlert.id,
+      });
+    } catch {
+      // Non-blocking notification dispatch
+    }
+
     return { ...updatedAlert };
   }
 
@@ -162,6 +190,27 @@ export class LocalAlertRepository implements AlertRepository {
 
     this.alerts[index] = updatedAlert;
     this.events.push(event);
+
+    try {
+      const notifEngine = getNotificationEngine();
+      await notifEngine.dispatch({
+        workspaceId,
+        environmentId: updatedAlert.environmentId,
+        eventType: "ALERT_RESOLVED",
+        source: "ALERT",
+        sourceId: updatedAlert.id,
+        serviceId: updatedAlert.serviceId,
+        serviceName: updatedAlert.serviceName,
+        severity: mapAlertSeverityToNotification(updatedAlert.severity),
+        title: `Alert Resolved: ${updatedAlert.title}`,
+        message: note
+          ? `Alert '${updatedAlert.title}' resolved by ${userName || userId}: ${note}`
+          : `Alert '${updatedAlert.title}' resolved by ${userName || userId}`,
+        relatedAlertId: updatedAlert.id,
+      });
+    } catch {
+      // Non-blocking notification dispatch
+    }
 
     return { ...updatedAlert };
   }
@@ -298,6 +347,27 @@ export class LocalAlertRepository implements AlertRepository {
 
         if (event) {
           this.events.unshift(event);
+
+          if ((event.eventType === "TRIGGERED" || event.eventType === "RE_TRIGGERED") && nextAlert) {
+            try {
+              const notifEngine = getNotificationEngine();
+              await notifEngine.dispatch({
+                workspaceId,
+                environmentId,
+                eventType: "ALERT_FIRING",
+                source: "ALERT",
+                sourceId: nextAlert.id,
+                serviceId: nextAlert.serviceId,
+                serviceName: nextAlert.serviceName,
+                severity: mapAlertSeverityToNotification(nextAlert.severity),
+                title: `Alert Firing: ${nextAlert.title}`,
+                message: nextAlert.summary,
+                relatedAlertId: nextAlert.id,
+              });
+            } catch {
+              // Non-blocking
+            }
+          }
         }
       }
     }

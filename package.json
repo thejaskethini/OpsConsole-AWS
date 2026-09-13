@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npx tsx --test tests/formatters.test.ts tests/session.test.ts tests/provider-boundary.test.ts tests/identity.test.ts tests/sre.test.ts tests/alerting.test.ts tests/incidents.test.ts"
+    "test": "npx tsx --test tests/formatters.test.ts tests/session.test.ts tests/provider-boundary.test.ts tests/identity.test.ts tests/sre.test.ts tests/alerting.test.ts tests/incidents.test.ts tests/notifications.test.ts tests/infrastructure-flow.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-amplify": "^3.1024.0",

@@ -55,20 +55,20 @@ function CustomNode({ data }: { data: Record<string, unknown> }) {
     <div
       style={{
         background: t.bg,
-        border: `2px solid ${isSelected ? "#fff" : isConnected ? t.border : isDimmed ? `${t.border}40` : t.border}`,
+        border: `2px solid ${isSelected ? "#38bdf8" : isConnected ? t.border : isDimmed ? `${t.border}25` : t.border}`,
         borderRadius: 14,
         padding: "12px 16px",
         minWidth: 180,
-        boxShadow: isSelected ? `0 0 24px ${t.border}80, ${t.glow}` : isConnected ? t.glow : "none",
+        boxShadow: isSelected ? `0 0 24px rgba(56,189,248,0.4), ${t.glow}` : isConnected ? `${t.glow}, 0 0 12px ${t.border}40` : "none",
         fontFamily: "Inter, system-ui, sans-serif",
         position: "relative",
-        opacity: isDimmed ? 0.35 : 1,
+        opacity: isDimmed ? 0.3 : 1,
         transition: "all 0.3s ease",
         cursor: "pointer",
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: t.border, width: 6, height: 6, border: "none", opacity: isSelected || isConnected ? 1 : 0 }} />
-      <Handle type="source" position={Position.Right} style={{ background: t.border, width: 6, height: 6, border: "none", opacity: isSelected || isConnected ? 1 : 0 }} />
+      <Handle type="target" position={Position.Left} style={{ background: isSelected ? "#38bdf8" : t.border, width: 6, height: 6, border: "none", opacity: isSelected || isConnected ? 1 : 0.4 }} />
+      <Handle type="source" position={Position.Right} style={{ background: isSelected ? "#38bdf8" : t.border, width: 6, height: 6, border: "none", opacity: isSelected || isConnected ? 1 : 0.4 }} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
         <span style={{ fontSize: 15 }}>{icon}</span>
@@ -101,7 +101,7 @@ const layerOrder = ["internet", "vpc", "alb", "ecs-cluster", "ecs", "ec2", "rds"
 function autoLayout(rawNodes: Record<string, unknown>[]): Node[] {
   const groups: Record<string, Record<string, unknown>[]> = {};
   for (const n of rawNodes) {
-    const t = n.type as string;
+    const t = (n.type as string) || "other";
     if (!groups[t]) groups[t] = [];
     groups[t].push(n);
   }
@@ -109,7 +109,9 @@ function autoLayout(rawNodes: Record<string, unknown>[]): Node[] {
   let x = 0;
   const xGap = 300;
   const yGap = 115;
-  for (const layer of layerOrder) {
+  const allLayers = [...layerOrder, ...Object.keys(groups).filter(k => !layerOrder.includes(k))];
+
+  for (const layer of allLayers) {
     const items = groups[layer];
     if (!items || items.length === 0) continue;
     const totalH = items.length * yGap;
@@ -137,76 +139,135 @@ export default function InfrastructurePage() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/infrastructure?region=${region}`);
       if (!res.ok) throw new Error((await res.json()).error || "Failed");
       const d = await res.json();
-      setRawNodes(d.nodes || []);
-      setRawEdges(d.edges || []);
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Unknown error"); }
-    finally { setLoading(false); }
+      const nodesData = d.nodes || [];
+      const edgesData = d.edges || [];
+      setRawNodes(nodesData);
+      setRawEdges(edgesData);
+      // Reset selectedNodeId if it no longer exists in newly fetched nodes
+      setSelectedNodeId(prev => {
+        if (!prev) return null;
+        return nodesData.some((n: Record<string, unknown>) => n.id === prev) ? prev : null;
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
   }, [region]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  // Compute which nodes are connected to the selected node
-  const connectedNodeIds = useMemo(() => {
+  // Compute set of directly connected neighbor node IDs (strictly neighbors, excluding selected node itself)
+  const directNeighborNodeIds = useMemo(() => {
     if (!selectedNodeId) return new Set<string>();
-    const connected = new Set<string>();
-    connected.add(selectedNodeId);
+    const neighbors = new Set<string>();
     for (const e of rawEdges) {
-      if (e.source === selectedNodeId) connected.add(e.target as string);
-      if (e.target === selectedNodeId) connected.add(e.source as string);
+      if (e.source === selectedNodeId && e.target !== selectedNodeId) {
+        neighbors.add(e.target as string);
+      } else if (e.target === selectedNodeId && e.source !== selectedNodeId) {
+        neighbors.add(e.source as string);
+      }
     }
-    return connected;
+    return neighbors;
   }, [selectedNodeId, rawEdges]);
 
-  // Only show edges connected to the selected node
-  const visibleEdges = useMemo(() => {
-    if (!selectedNodeId) return [];
-    return rawEdges
-      .filter(e => e.source === selectedNodeId || e.target === selectedNodeId)
-      .map(e => ({
-        id: e.id as string,
+  // Direct edges count for the selected node
+  const directEdgesCount = useMemo(() => {
+    if (!selectedNodeId) return rawEdges.length;
+    return rawEdges.filter(e => e.source === selectedNodeId || e.target === selectedNodeId).length;
+  }, [selectedNodeId, rawEdges]);
+
+  // Edge rendering:
+  // - When no node is selected: render all edges normally with standard styling and subtle animation.
+  // - When a node is selected: render all edges; highlight direct edges and dim unrelated edges significantly.
+  const flowEdges: Edge[] = useMemo(() => {
+    if (!selectedNodeId) {
+      return rawEdges.map(e => ({
+        id: (e.id as string) || `e-${e.source}-${e.target}`,
         source: e.source as string,
         target: e.target as string,
         label: e.label as string | undefined,
         animated: true,
-        style: { stroke: "#38bdf8", strokeWidth: 2.5 },
-        labelStyle: { fill: "#e2e8f0", fontSize: 9, fontWeight: 600 },
-        labelBgStyle: { fill: "#0f172a", fillOpacity: 0.95 },
-        labelBgPadding: [6, 3] as [number, number],
+        style: { stroke: "#475569", strokeWidth: 1.5, opacity: 0.8 },
+        labelStyle: { fill: "#94a3b8", fontSize: 9, fontWeight: 500 },
+        labelBgStyle: { fill: "#0f172a", fillOpacity: 0.9 },
+        labelBgPadding: [4, 2] as [number, number],
         labelBgBorderRadius: 4,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#38bdf8", width: 16, height: 16 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b", width: 14, height: 14 },
       }));
+    }
+
+    return rawEdges.map(e => {
+      const isDirect = e.source === selectedNodeId || e.target === selectedNodeId;
+      if (isDirect) {
+        return {
+          id: (e.id as string) || `e-${e.source}-${e.target}`,
+          source: e.source as string,
+          target: e.target as string,
+          label: e.label as string | undefined,
+          animated: true,
+          zIndex: 10,
+          style: { stroke: "#38bdf8", strokeWidth: 2.5, opacity: 1 },
+          labelStyle: { fill: "#e0f2fe", fontSize: 9.5, fontWeight: 700 },
+          labelBgStyle: { fill: "#0c4a6e", fillOpacity: 0.95 },
+          labelBgPadding: [6, 3] as [number, number],
+          labelBgBorderRadius: 4,
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#38bdf8", width: 16, height: 16 },
+        };
+      } else {
+        return {
+          id: (e.id as string) || `e-${e.source}-${e.target}`,
+          source: e.source as string,
+          target: e.target as string,
+          label: undefined, // Hide label on dimmed unrelated edges
+          animated: false,
+          zIndex: 1,
+          style: { stroke: "#1e293b", strokeWidth: 1, opacity: 0.15 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#1e293b", width: 10, height: 10 },
+        };
+      }
+    });
   }, [selectedNodeId, rawEdges]);
 
-  // Nodes with selection/dim state
+  // Nodes with selection/dim state:
+  // - No selection: all nodes normal (_selected: false, _connected: false, _dimmed: false)
+  // - Selected: selected node is _selected, direct neighbors are _connected, all other nodes are _dimmed
   const nodes = useMemo(() => {
     const base = autoLayout(rawNodes);
     if (!selectedNodeId) return base;
-    return base.map(n => ({
-      ...n,
-      data: {
-        ...n.data,
-        _selected: n.id === selectedNodeId,
-        _connected: connectedNodeIds.has(n.id),
-        _dimmed: !connectedNodeIds.has(n.id),
-      },
-    }));
-  }, [rawNodes, selectedNodeId, connectedNodeIds]);
+    return base.map(n => {
+      const isSelected = n.id === selectedNodeId;
+      const isConnected = directNeighborNodeIds.has(n.id);
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          _selected: isSelected,
+          _connected: isConnected,
+          _dimmed: !isSelected && !isConnected,
+        },
+      };
+    });
+  }, [rawNodes, selectedNodeId, directNeighborNodeIds]);
 
-  const onNodeClick = useCallback((_: any, node: Node) => {
-    setSelectedNodeId(prev => prev === node.id ? null : node.id);
-  }, [region]);
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    setSelectedNodeId(prev => (prev === node.id ? null : node.id));
+  }, []);
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
-  }, [region]);
+  }, []);
 
   const selectedNode = selectedNodeId ? rawNodes.find(n => n.id === selectedNodeId) : null;
-  const connectionCount = selectedNodeId ? visibleEdges.length : rawEdges.length;
+  const selectedNodeLabel = (selectedNode?.label as string) || selectedNodeId || "";
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-7rem)]">
@@ -216,21 +277,41 @@ export default function InfrastructurePage() {
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Network size={22} className="text-blue-400" /> Infrastructure Flow
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {rawNodes.length} resources · {connectionCount} connections
-            {selectedNodeId
-              ? <span className="text-blue-400 ml-1">— Showing connections for <strong>{(selectedNode?.label as string) || selectedNodeId}</strong></span>
-              : " — Click any node to reveal its connections"
-            }
+          <p className="text-sm text-slate-400 mt-1">
+            {selectedNodeId ? (
+              <>
+                <span className="text-slate-300 font-medium">{rawNodes.length} resources</span>
+                <span className="text-slate-500"> · </span>
+                <span className="text-slate-300 font-medium">{rawEdges.length} connections</span>
+                <span className="text-slate-500"> — </span>
+                <span className="text-sky-400 font-medium">
+                  Showing {directEdgesCount} connection{directEdgesCount === 1 ? "" : "s"} for <strong>{selectedNodeLabel}</strong>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-slate-300 font-medium">{rawNodes.length} resources</span>
+                <span className="text-slate-500"> · </span>
+                <span className="text-slate-300 font-medium">{rawEdges.length} connections</span>
+                <span className="text-slate-500"> — </span>
+                <span className="text-slate-400">Showing full infrastructure topology</span>
+              </>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
           {selectedNodeId && (
-            <button onClick={() => setSelectedNodeId(null)} className="flex items-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 text-sm rounded-lg transition-colors border border-slate-600/50">
+            <button
+              onClick={() => setSelectedNodeId(null)}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm rounded-lg transition-colors border border-slate-700"
+            >
               <X size={14} /> Clear Selection
             </button>
           )}
-          <button onClick={fetchData} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors font-medium">
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors font-medium shadow-sm"
+          >
             <RefreshCw size={14} /> Refresh
           </button>
         </div>
@@ -241,13 +322,17 @@ export default function InfrastructurePage() {
           <Loader className="animate-spin" size={20} /> Discovering infrastructure…
         </div>
       )}
-      {error && <div className="bg-red-900/20 border border-red-700/50 text-red-400 rounded-xl p-4 text-sm">Error: {error}</div>}
+      {error && (
+        <div className="bg-red-900/20 border border-red-700/50 text-red-400 rounded-xl p-4 text-sm">
+          Error: {error}
+        </div>
+      )}
 
       {!loading && !error && (
         <div className="flex-1 rounded-2xl border border-white/[0.08] overflow-hidden" style={{ background: "#060912" }}>
           <ReactFlow
             nodes={nodes}
-            edges={visibleEdges}
+            edges={flowEdges}
             nodeTypes={nodeTypes}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
@@ -277,7 +362,7 @@ export default function InfrastructurePage() {
 
       {/* Legend */}
       {!loading && !error && (
-        <div className="flex flex-wrap gap-4 text-[10px] text-slate-500 shrink-0 pb-2">
+        <div className="flex flex-wrap gap-4 text-[10px] text-slate-500 shrink-0 pb-2 items-center">
           {Object.entries(typeIcons).map(([type, icon]) => (
             <span key={type} className="flex items-center gap-1">
               <span>{icon}</span>
@@ -285,7 +370,9 @@ export default function InfrastructurePage() {
               <span className="w-3 h-0.5 rounded" style={{ background: typeColors[type]?.border || "#475569" }} />
             </span>
           ))}
-          <span className="ml-4 text-blue-400/60">Click a node to see its connections</span>
+          <span className="ml-4 text-sky-400/70 font-medium">
+            {selectedNodeId ? "Click canvas or 'Clear Selection' to reset view" : "Click any resource to inspect direct connections"}
+          </span>
         </div>
       )}
     </div>

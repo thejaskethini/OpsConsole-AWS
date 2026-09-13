@@ -9,7 +9,7 @@ import {
   Loader2, GitBranch, Cpu, Radio, HardDrive, Layers,
   Wifi, BarChart2, FlaskConical, Users, Settings, Building2,
   Activity, Target, ServerCog, Bell, Cloud, ChevronLeft,
-  Sparkles, AlertOctagon,
+  Sparkles, AlertOctagon, Flame,
 } from "lucide-react";
 import { RegionProvider, useRegion } from "@/components/RegionProvider";
 import { IdentityProvider } from "@/components/identity/IdentityProvider";
@@ -45,9 +45,13 @@ const observeNavItems: NavItemDef[] = [
 const reliabilityNavItems: NavItemDef[] = [
   { href: "/sre", icon: Activity, label: "SRE Health" },
   { href: "/slos", icon: Target, label: "SLOs & Error Budgets" },
-  { href: "/alerts", icon: Bell, label: "Alerts" },
+  { href: "/alerts", icon: Flame, label: "Alerts" },
   { href: "/incidents", icon: AlertOctagon, label: "Incidents" },
   { href: "/history", icon: Clock, label: "Failure History" },
+];
+
+const automationNavItems: NavItemDef[] = [
+  { href: "/notifications", icon: Bell, label: "Notifications" },
 ];
 
 const awsCategories: AwsCategoryDef[] = [
@@ -573,7 +577,21 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
             <div className="h-px bg-white/[0.04]" />
 
-            {/* 4. CLOUD */}
+            {/* 4. AUTOMATION */}
+            <div>
+              {!isCollapsed && (
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
+                  Automation
+                </p>
+              )}
+              {automationNavItems.map((n) => (
+                <NavLink key={n.href} {...n} collapsed={isCollapsed} />
+              ))}
+            </div>
+
+            <div className="h-px bg-white/[0.04]" />
+
+            {/* 5. CLOUD */}
             <div>
               {!isCollapsed && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">

@@ -66,7 +66,9 @@ export type PermissionId =
   | "members:manage"
   | "settings:manage"
   | "sre:read"
-  | "sre:manage";
+  | "sre:manage"
+  | "notifications:read"
+  | "notifications:manage";
 
 export interface Permission {
   id: PermissionId;

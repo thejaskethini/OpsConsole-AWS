@@ -21,7 +21,7 @@ export async function GET(request: Request) {
           currentMonthDays: 10,
           currentMonthLabel: "March 2026",
         },
-        services: mockCostData.topServices.map((s) => s.service),
+        services: mockCostData.topServices,
         serviceData: mockCostData.topServices,
         rdsBreakdown: mockCostData.rdsBreakdown,
         availableMonths: ["2026-03", "2026-02", "2026-01"],

@@ -9,7 +9,7 @@ import {
   Loader2, GitBranch, Cpu, Radio, HardDrive, Layers,
   Wifi, BarChart2, FlaskConical, Users, Settings, Building2,
   Activity, Target, ServerCog, Bell, Cloud, ChevronLeft,
-  Sparkles, AlertOctagon, Flame,
+  Sparkles, AlertOctagon, Flame, FolderKanban,
 } from "lucide-react";
 import { RegionProvider, useRegion } from "@/components/RegionProvider";
 import { IdentityProvider } from "@/components/identity/IdentityProvider";
@@ -41,6 +41,7 @@ const homeNavItems: NavItemDef[] = [
 const observeNavItems: NavItemDef[] = [
   { href: "/services", icon: ServerCog, label: "Services" },
   { href: "/infrastructure", icon: Network, label: "Infrastructure" },
+  { href: "/projects", icon: FolderKanban, label: "Projects" },
 ];
 
 const reliabilityNavItems: NavItemDef[] = [

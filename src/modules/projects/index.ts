@@ -13,6 +13,8 @@ export {
   SimulationAsanaProvider,
   classifyEvidence,
 } from "./integrations";
+export * from "./real-integrations";
+export * from "./integration-service";
 export {
   calculateFunctionPoints,
   calculateCOCOMO,

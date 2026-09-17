@@ -195,9 +195,10 @@ export interface ProjectRiskInput {
 export interface IntegrationStatus {
   provider: "JIRA" | "ASANA";
   name: string;
-  status: "CONNECTED" | "SIMULATED" | "DISCONNECTED";
+  status: "CONNECTED" | "SIMULATED" | "DISCONNECTED" | "UNAVAILABLE" | "ERROR";
   lastSyncAt?: string;
   isSimulated: boolean;
+  metadata?: Record<string, string>;
 }
 
 export interface ExternalWorkItem {

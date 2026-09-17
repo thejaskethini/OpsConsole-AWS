@@ -1,0 +1,3 @@
+import { NextRequest, NextResponse } from "next/server"; import { consumeOAuthState, exchangeOAuthCode } from "@/modules/projects";
+export const runtime = "nodejs";
+export async function GET(req: NextRequest) { const u = new URL(req.url); const state = u.searchParams.get("state"); const code = u.searchParams.get("code"); const record = state ? consumeOAuthState(state, "JIRA") : null; if (!record || !code) return NextResponse.json({ error: "Invalid or expired OAuth state", code: "INVALID_OAUTH_STATE" }, { status: 400 }); try { await exchangeOAuthCode("JIRA", record.scope, code); return NextResponse.redirect(new URL("/projects/integrations?jira=connected", req.url)); } catch { return NextResponse.redirect(new URL("/projects/integrations?jira=error", req.url)); } }

@@ -18,6 +18,12 @@ import {
   analyzeDependencies,
   analyzeProjectRisk,
   calculateRiskSeverity,
+  MemoryCredentialStore,
+  persistSelectedResources,
+  getSelectedResources,
+  createProposal,
+  approveProposal,
+  executeProposal,
   type ProjectRiskInput,
 } from "../src/modules/projects";
 
@@ -237,5 +243,27 @@ describe("ASPM projects domain", () => {
     const cocomo = calculateCOCOMO({ functionPoints: 200, projectScale: "moderate" });
     assert.ok(cocomo.estimatedPersonMonths > 0);
     assert.ok(Array.isArray(cocomo.breakdown));
+  });
+
+  it("persists only scoped integration resource selections and prevents cross-scope reads", async () => {
+    const store = new MemoryCredentialStore();
+    const scope = { userId: "user-a", workspaceId: TEST_WS, environmentId: TEST_ENV };
+    await store.saveCredential(scope, "JIRA", { accessToken: "test-access-token", refreshToken: "test-refresh-token" });
+    await persistSelectedResources(scope, "JIRA", { cloudId: "cloud-1", siteName: "Engineering", projectId: "100", projectName: "OPS", issueTypeId: "3", issueTypeName: "Task" }, store);
+    const selected = await getSelectedResources(scope, "JIRA", store);
+    assert.deepStrictEqual(selected, { cloudId: "cloud-1", siteName: "Engineering", siteUrl: undefined, projectId: "100", projectName: "OPS", issueTypeId: "3", issueTypeName: "Task" });
+    assert.equal((await getSelectedResources({ ...scope, environmentId: "env-other" }, "JIRA", store)).cloudId, undefined);
+    const stored = await store.getCredential(scope, "JIRA");
+    assert.equal(stored?.metadata?.accessToken, undefined);
+    assert.equal(stored?.accessToken, "test-access-token");
+  });
+
+  it("requires recorded approval and isolates proposals by user, workspace, and environment", async () => {
+    const scope = { userId: "approval-user", workspaceId: TEST_WS, environmentId: TEST_ENV };
+    const proposal = createProposal(scope, "JIRA", "proj-payments-modernization", undefined, { title: "Approval test", description: "Controlled test" });
+    await assert.rejects(() => executeProposal(scope, proposal.id), /recorded server-side approval/);
+    assert.equal(approveProposal({ ...scope, userId: "another-user" }, proposal.id), null);
+    assert.ok(approveProposal(scope, proposal.id));
+    assert.throws(() => approveProposal(scope, proposal.id), /already been approved/);
   });
 });

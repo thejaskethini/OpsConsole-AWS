@@ -16,6 +16,7 @@ import { IdentityProvider } from "@/components/identity/IdentityProvider";
 import { WorkspaceSwitcher } from "@/components/identity/WorkspaceSwitcher";
 import { EnvironmentSwitcher } from "@/components/identity/EnvironmentSwitcher";
 import { UserMenu } from "@/components/identity/UserMenu";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 /* ─── Target Information Architecture Definition ───────────────────── */
 
@@ -466,8 +467,10 @@ function AuthOverlay({ onAuthenticated }: { onAuthenticated: () => void }) {
 /* ── Layout Inner ────────────────────────────────────────────────── */
 function LayoutInner({ children }: { children: React.ReactNode }) {
   const { region } = useRegion();
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
 
   useEffect(() => {
     fetch("/api/auth/status", { credentials: "same-origin" })
@@ -476,18 +479,35 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       .catch(() => setIsAuthenticated(false));
   }, []);
 
+  // Close mobile nav on route change
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
   if (isAuthenticated === null) return null;
   if (!isAuthenticated) return <AuthOverlay onAuthenticated={() => setIsAuthenticated(true)} />;
 
-  const sidebarWidth = isCollapsed ? 68 : 252;
+  const desktopSidebarWidth = isCollapsed ? 68 : 252;
 
   return (
     <IdentityProvider>
-      <div className="flex min-h-screen bg-[#090d16] text-slate-200">
-        {/* ── Sidebar — FIXED ───────────────────────────────────── */}
+      <div className="flex min-h-screen bg-[#090d16] text-slate-200 overflow-x-hidden">
+        {/* ── Mobile Backdrop Overlay ───────────────────────────── */}
+        {mobileNavOpen && (
+          <div
+            onClick={() => setMobileNavOpen(false)}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-200"
+          />
+        )}
+
+        {/* ── Sidebar (Fixed Desktop + Mobile Drawer) ─────────────── */}
         <aside
-          style={{ width: `${sidebarWidth}px` }}
-          className="fixed top-0 left-0 h-screen flex flex-col border-r border-white/[0.06] bg-[#0c1220] z-50 transition-all duration-200"
+          style={{ width: `${desktopSidebarWidth}px` }}
+          className={`fixed top-0 left-0 h-screen flex flex-col border-r border-white/[0.06] bg-[#0c1220] z-50 transition-all duration-200 ${
+            mobileNavOpen
+              ? "translate-x-0 shadow-2xl !w-[260px]"
+              : "-translate-x-full lg:translate-x-0"
+          }`}
         >
           {/* Brand & Workspace Area */}
           <div className="px-4 py-3.5 border-b border-white/[0.06] shrink-0">
@@ -496,7 +516,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                 <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
                   <LayoutDashboard size={16} className="text-cyan-400" />
                 </div>
-                {!isCollapsed && (
+                {(!isCollapsed || mobileNavOpen) && (
                   <div className="min-w-0">
                     <p className="text-white font-semibold text-[13.5px] leading-tight tracking-tight font-heading truncate">
                       OpsConsole
@@ -508,19 +528,28 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                 )}
               </div>
 
-              {/* Sidebar Collapse Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                className="p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-white/[0.04] transition-colors"
-              >
-                <ChevronLeft size={15} className={`transition-transform duration-200 ${isCollapsed ? "rotate-180" : ""}`} />
-              </button>
+              {/* Desktop Collapse Toggle / Mobile Close */}
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setIsCollapsed(!isCollapsed)}
+                  title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  className="hidden lg:flex p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-white/[0.04] transition-colors"
+                >
+                  <ChevronLeft size={15} className={`transition-transform duration-200 ${isCollapsed ? "rotate-180" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="lg:hidden p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Workspace switcher */}
-            {!isCollapsed && (
+            {(!isCollapsed || mobileNavOpen) && (
               <div className="mt-2.5">
                 <WorkspaceSwitcher />
               </div>
@@ -529,21 +558,21 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Region + Environment selectors */}
           <div className="px-3 py-2.5 border-b border-white/[0.06] shrink-0 flex flex-col gap-2">
-            <RegionSelector collapsed={isCollapsed} />
-            {!isCollapsed && <EnvironmentSwitcher />}
+            <RegionSelector collapsed={isCollapsed && !mobileNavOpen} />
+            {(!isCollapsed || mobileNavOpen) && <EnvironmentSwitcher />}
           </div>
 
           {/* Navigation — scrollable independently */}
           <nav className="flex-1 px-2.5 py-3 flex flex-col gap-3.5 overflow-y-auto min-h-0 select-none">
             {/* 1. HOME */}
             <div>
-              {!isCollapsed && (
+              {(!isCollapsed || mobileNavOpen) && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
                   Home
                 </p>
               )}
               {homeNavItems.map((n) => (
-                <NavLink key={n.href} {...n} collapsed={isCollapsed} />
+                <NavLink key={n.href} {...n} collapsed={isCollapsed && !mobileNavOpen} />
               ))}
             </div>
 
@@ -551,13 +580,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* 2. OBSERVE */}
             <div>
-              {!isCollapsed && (
+              {(!isCollapsed || mobileNavOpen) && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
                   Observe
                 </p>
               )}
               {observeNavItems.map((n) => (
-                <NavLink key={n.href} {...n} collapsed={isCollapsed} />
+                <NavLink key={n.href} {...n} collapsed={isCollapsed && !mobileNavOpen} />
               ))}
             </div>
 
@@ -565,13 +594,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* 3. RELIABILITY */}
             <div>
-              {!isCollapsed && (
+              {(!isCollapsed || mobileNavOpen) && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
                   Reliability
                 </p>
               )}
               {reliabilityNavItems.map((n) => (
-                <NavLink key={n.href} {...n} collapsed={isCollapsed} />
+                <NavLink key={n.href} {...n} collapsed={isCollapsed && !mobileNavOpen} />
               ))}
             </div>
 
@@ -579,13 +608,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* 4. AUTOMATION */}
             <div>
-              {!isCollapsed && (
+              {(!isCollapsed || mobileNavOpen) && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
                   Automation
                 </p>
               )}
               {automationNavItems.map((n) => (
-                <NavLink key={n.href} {...n} collapsed={isCollapsed} />
+                <NavLink key={n.href} {...n} collapsed={isCollapsed && !mobileNavOpen} />
               ))}
             </div>
 
@@ -593,40 +622,40 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* 5. CLOUD */}
             <div>
-              {!isCollapsed && (
+              {(!isCollapsed || mobileNavOpen) && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
                   Cloud
                 </p>
               )}
               {/* Nested Collapsible AWS Module */}
-              <AwsCollapsibleNav collapsed={isCollapsed} />
+              <AwsCollapsibleNav collapsed={isCollapsed && !mobileNavOpen} />
 
               {/* Direct Cloud Operational Items */}
               <div className="mt-1 flex flex-col gap-0.5">
                 {cloudDirectNavItems.map((n) => (
-                  <NavLink key={n.href} {...n} collapsed={isCollapsed} />
+                  <NavLink key={n.href} {...n} collapsed={isCollapsed && !mobileNavOpen} />
                 ))}
               </div>
             </div>
 
             <div className="h-px bg-white/[0.04]" />
 
-            {/* 5. PLATFORM */}
+            {/* 6. PLATFORM */}
             <div>
-              {!isCollapsed && (
+              {(!isCollapsed || mobileNavOpen) && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
                   Platform
                 </p>
               )}
               {platformNavItems.map((n) => (
-                <NavLink key={n.href} {...n} collapsed={isCollapsed} />
+                <NavLink key={n.href} {...n} collapsed={isCollapsed && !mobileNavOpen} />
               ))}
             </div>
           </nav>
 
-          {/* Footer — Status indicators with generous bottom padding */}
-          <div className="px-3.5 py-3 border-t border-white/[0.06] shrink-0 pb-8 bg-[#090d16]/60 backdrop-blur-sm">
-            {isCollapsed ? (
+          {/* Footer — Status indicators */}
+          <div className="px-3.5 py-3 border-t border-white/[0.06] shrink-0 pb-6 bg-[#090d16]/60 backdrop-blur-sm">
+            {isCollapsed && !mobileNavOpen ? (
               <div className="flex justify-center py-1" title={`AWS Connected (${region}) · Simulated SRE`}>
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] animate-pulse-subtle" />
               </div>
@@ -648,42 +677,56 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {/* ── Main ──────────────────────────────────────────────── */}
+        {/* ── Main Content Area (Fluid & Responsive) ──────────────── */}
         <div
-          style={{ marginLeft: `${sidebarWidth}px`, width: `calc(100vw - ${sidebarWidth}px)` }}
-          className="flex flex-col min-h-screen bg-[#090d16] transition-all duration-200"
+          className={`flex flex-col min-h-screen bg-[#090d16] w-full transition-all duration-200 ${
+            isCollapsed ? "lg:pl-[68px]" : "lg:pl-[252px]"
+          }`}
         >
-          {/* Top Bar */}
-          <header className="h-[52px] shrink-0 border-b border-white/[0.06] bg-[#0c1220]/90 backdrop-blur-md flex items-center px-6 justify-between sticky top-0 z-40">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                <span className="text-slate-200 font-semibold">OpsConsole</span>
-                <span className="text-slate-600">/</span>
-                <span className="text-slate-400">Unified SRE Operations Platform</span>
+          {/* Top Header Bar */}
+          <header className="h-[52px] shrink-0 border-b border-white/[0.06] bg-[#0c1220]/90 backdrop-blur-md flex items-center px-4 sm:px-6 justify-between sticky top-0 z-30 transition-all duration-200">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {/* Mobile Hamburger Toggle */}
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(true)}
+                className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                title="Open navigation"
+              >
+                <LayoutDashboard size={18} className="text-cyan-400" />
+              </button>
+
+              <div className="flex items-center gap-2 text-xs text-slate-400 font-medium truncate">
+                <span className="text-slate-200 font-semibold truncate">OpsConsole</span>
+                <span className="text-slate-600 hidden xs:inline">/</span>
+                <span className="text-slate-400 hidden sm:inline truncate">Unified SRE Operations Platform</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Telemetry Indicator */}
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-500/10 border border-violet-500/20 text-[11px] font-mono text-violet-300">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* SRE Telemetry Indicator */}
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-500/10 border border-violet-500/20 text-[11px] font-mono text-violet-300">
                 <Sparkles size={11} className="text-violet-400" />
                 <span>SIMULATED SRE</span>
               </div>
 
               {/* AWS Substrate Indicator */}
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-mono text-emerald-300">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-mono text-emerald-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span>AWS CONNECTED</span>
               </div>
 
-              {/* User menu in top bar */}
+              {/* Notification Bell */}
+              <NotificationBell />
+
+              {/* User menu */}
               <UserMenu />
             </div>
           </header>
 
-          {/* Main Content Area */}
-          <main className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#090d16]">
-            <div className="max-w-[1536px] w-full mx-auto">
+          {/* Page Body Wrapper (Accommodates Desktop Sidebar Offset and Ultrawide Widths) */}
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#090d16] transition-all duration-200">
+            <div className="w-full mx-auto max-w-[2400px]">
               {children}
             </div>
           </main>

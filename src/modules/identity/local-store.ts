@@ -145,11 +145,12 @@ export class LocalIdentityRepository implements IdentityRepository {
 
   // ── Workspace ──────────────────────────────────────────────────────────
   async getWorkspaceById(id: string): Promise<Workspace | null> {
-    return WORKSPACES.find((w) => w.id === id) ?? null;
+    const norm = id === "ws-demo" ? "ws_demo_001" : id === "ws-acme" ? "ws_acme_002" : id;
+    return WORKSPACES.find((w) => w.id === norm || w.slug === norm) ?? null;
   }
 
   async getWorkspaceBySlug(slug: string): Promise<Workspace | null> {
-    return WORKSPACES.find((w) => w.slug === slug) ?? null;
+    return WORKSPACES.find((w) => w.slug === slug || w.id === slug) ?? null;
   }
 
   async listWorkspacesForUser(userId: string): Promise<Workspace[]> {
@@ -161,8 +162,9 @@ export class LocalIdentityRepository implements IdentityRepository {
 
   // ── Membership ─────────────────────────────────────────────────────────
   async getMembership(userId: string, workspaceId: string): Promise<Membership | null> {
+    const norm = workspaceId === "ws-demo" ? "ws_demo_001" : workspaceId === "ws-acme" ? "ws_acme_002" : workspaceId;
     return MEMBERSHIPS.find(
-      (m) => m.userId === userId && m.workspaceId === workspaceId && m.status === "active"
+      (m) => m.userId === userId && (m.workspaceId === norm || m.workspaceId === workspaceId) && m.status === "active"
     ) ?? null;
   }
 
@@ -171,8 +173,9 @@ export class LocalIdentityRepository implements IdentityRepository {
   }
 
   async getMembersOfWorkspace(workspaceId: string): Promise<WorkspaceMember[]> {
+    const norm = workspaceId === "ws-demo" ? "ws_demo_001" : workspaceId;
     const memberships = MEMBERSHIPS.filter(
-      (m) => m.workspaceId === workspaceId && m.status === "active"
+      (m) => (m.workspaceId === norm || m.workspaceId === workspaceId) && m.status === "active"
     );
     return memberships.flatMap((m) => {
       const user = USERS.find((u) => u.id === m.userId);
@@ -189,12 +192,14 @@ export class LocalIdentityRepository implements IdentityRepository {
 
   // ── Environment ─────────────────────────────────────────────────────────
   async getEnvironmentsForWorkspace(workspaceId: string): Promise<Environment[]> {
+    const norm = workspaceId === "ws-demo" ? "ws_demo_001" : workspaceId;
     return ENVIRONMENTS.filter(
-      (e) => e.workspaceId === workspaceId && e.status === "active"
+      (e) => (e.workspaceId === norm || e.workspaceId === workspaceId) && e.status === "active"
     );
   }
 
   async getEnvironmentById(id: string): Promise<Environment | null> {
-    return ENVIRONMENTS.find((e) => e.id === id) ?? null;
+    const norm = id === "env-prod" ? "env_prod_001" : id === "env-stag" ? "env_stag_002" : id;
+    return ENVIRONMENTS.find((e) => e.id === norm || e.id === id) ?? null;
   }
 }

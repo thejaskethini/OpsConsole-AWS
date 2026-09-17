@@ -14,7 +14,7 @@ function CostLineChart({ data, avgPerDay }: { data: { date: string; amount: numb
     return <p className="text-slate-500 text-xs text-center py-12 font-mono">No cost telemetry available for this period</p>;
 
   const maxVal = Math.max(...data.map((d) => d.amount), 0.01);
-  const w = 780, h = 220, pad = { t: 20, r: 20, b: 32, l: 60 };
+  const w = 920, h = 220, pad = { t: 20, r: 24, b: 32, l: 60 };
   const plotW = w - pad.l - pad.r;
   const plotH = h - pad.t - pad.b;
 
@@ -28,16 +28,17 @@ function CostLineChart({ data, avgPerDay }: { data: { date: string; amount: numb
 
   const getX = (i: number) => pad.l + (i + 0.5) * (plotW / data.length);
   const getY = (v: number) => pad.t + plotH - (v / maxVal) * plotH;
-  const barW = Math.max(6, Math.min(18, (plotW / data.length) * 0.6));
+  const barW = Math.max(6, Math.min(22, (plotW / data.length) * 0.6));
   const avgY = avgPerDay && avgPerDay > 0 ? getY(avgPerDay) : null;
 
   const hoveredItem = hoveredIdx !== null ? data[hoveredIdx] : null;
 
   return (
-    <div className="relative w-full select-none">
+    <div className="relative w-full select-none flex justify-center">
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="w-full h-auto overflow-visible"
+        className="w-full max-h-[250px] overflow-visible"
+        preserveAspectRatio="xMidYMid meet"
         onMouseLeave={() => setHoveredIdx(null)}
       >
         <defs>

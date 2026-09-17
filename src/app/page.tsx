@@ -30,12 +30,19 @@ import {
   Layers,
   Cpu,
   AlertOctagon,
+  Bell,
+  Mail,
+  MessageSquare,
+  Globe,
+  Share2,
 } from "lucide-react";
 import { useRegion } from "@/components/RegionProvider";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ErrorBudgetBar } from "@/components/sre/ErrorBudgetBar";
 import { BurnRateBadge } from "@/components/sre/BurnRateBadge";
+import { NotificationSeverityBadge, ChannelBadge } from "@/components/notifications";
 import type { ServiceWithReliability, SREExecutiveHealth } from "@/modules/sre/types";
+import type { Notification } from "@/modules/notifications/types";
 
 /* ─── Radial Gauge (SVG) ───────────────────────────────────────────── */
 function RadialGauge({
@@ -107,9 +114,9 @@ function CostTrendChart({
     );
   }
 
-  const w = 680;
+  const w = 900;
   const h = 210;
-  const pad = { t: 16, r: 20, b: 32, l: 56 };
+  const pad = { t: 16, r: 24, b: 32, l: 56 };
   const plotW = w - pad.l - pad.r;
   const plotH = h - pad.t - pad.b;
 
@@ -129,7 +136,7 @@ function CostTrendChart({
 
   const getX = (i: number) => pad.l + (i + 0.5) * (plotW / data.length);
   const getY = (v: number) => pad.t + plotH - (v / maxVal) * plotH;
-  const barW = Math.max(6, Math.min(20, (plotW / data.length) * 0.55));
+  const barW = Math.max(6, Math.min(22, (plotW / data.length) * 0.55));
   const avgY = getY(avgPerDay);
 
   // Cumulative line points
@@ -146,10 +153,11 @@ function CostTrendChart({
   const hoveredItem = hoveredIdx !== null ? data[hoveredIdx] : null;
 
   return (
-    <div className="relative w-full select-none">
+    <div className="relative w-full select-none flex justify-center">
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="w-full h-auto overflow-visible"
+        className="w-full max-h-[240px] overflow-visible"
+        preserveAspectRatio="xMidYMid meet"
         onMouseLeave={() => setHoveredIdx(null)}
       >
         <defs>
@@ -496,12 +504,22 @@ export default function Dashboard() {
     investigating: number;
   } | null>(null);
 
+  // Notification State
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationStats, setNotificationStats] = useState<{
+    totalCount: number;
+    deliveredCount: number;
+    failedCount: number;
+  } | null>(null);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+
   const { region } = useRegion();
 
   useEffect(() => {
     setCostLoading(true);
     setMetricsLoading(true);
     setSreLoading(true);
+    setNotificationsLoading(true);
 
     fetch("/api/cost")
       .then((r) => r.json())
@@ -522,13 +540,14 @@ export default function Dashboard() {
       .catch(() => {})
       .finally(() => setMetricsLoading(false));
 
-    // Fetch SRE Health, Services, and Incidents in parallel
+    // Fetch SRE Health, Services, Incidents, and Notifications in parallel
     Promise.all([
       fetch("/api/sre/health").then((r) => r.json()),
       fetch("/api/sre/services").then((r) => r.json()),
       fetch("/api/incidents").then((r) => r.json()).catch(() => null),
+      fetch("/api/notifications").then((r) => r.json()).catch(() => null),
     ])
-      .then(([healthData, servicesData, incidentsData]) => {
+      .then(([healthData, servicesData, incidentsData, notificationsData]) => {
         if (!healthData.error) setSreHealth(healthData);
         if (servicesData.services) setSreServices(servicesData.services);
         if (incidentsData?.stats) {
@@ -539,9 +558,22 @@ export default function Dashboard() {
             investigating: incidentsData.stats.investigating || 0,
           });
         }
+        if (notificationsData?.data) {
+          setNotifications(notificationsData.data.notifications || []);
+          if (notificationsData.data.stats) {
+            setNotificationStats({
+              totalCount: notificationsData.data.stats.totalCount || 0,
+              deliveredCount: notificationsData.data.stats.deliveredCount || 0,
+              failedCount: notificationsData.data.stats.failedCount || 0,
+            });
+          }
+        }
       })
       .catch(() => {})
-      .finally(() => setSreLoading(false));
+      .finally(() => {
+        setSreLoading(false);
+        setNotificationsLoading(false);
+      });
   }, [region]);
 
   return (
@@ -560,7 +592,19 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <Link
+            href="/notifications"
+            className="px-3.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 text-xs text-blue-300 font-semibold transition-colors flex items-center gap-1.5"
+          >
+            <Bell size={14} className="text-blue-400" />
+            <span>Notifications</span>
+            {notificationStats && notificationStats.totalCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-blue-500/30 text-blue-200 text-[10px] font-mono font-bold">
+                {notificationStats.totalCount}
+              </span>
+            )}
+          </Link>
           <Link
             href="/incidents"
             className="px-3.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-xs text-rose-300 font-semibold transition-colors flex items-center gap-1.5"
@@ -779,6 +823,70 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+
+            {/* ── Recent Operational Notifications Stream ────────────────── */}
+            <div className="flex flex-col gap-3 mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell size={15} className="text-blue-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Recent Operational Notifications ({notifications.length})
+                  </h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Link href="/notifications/rules" className="text-xs text-slate-400 hover:text-slate-200">
+                    Rules →
+                  </Link>
+                  <Link href="/notifications" className="text-xs text-cyan-400 hover:text-cyan-300 font-medium">
+                    All Notifications →
+                  </Link>
+                </div>
+              </div>
+
+              {notificationsLoading && (
+                <div className="rounded-xl surface-card p-6 flex items-center justify-center gap-2 text-slate-400 text-xs">
+                  <Loader size={14} className="animate-spin text-cyan-400" />
+                  Loading notifications…
+                </div>
+              )}
+
+              {!notificationsLoading && notifications.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {notifications.slice(0, 6).map((n) => (
+                    <Link
+                      key={n.id}
+                      href={`/notifications/${n.id}`}
+                      className="rounded-xl p-4 surface-card hover:border-cyan-500/30 transition-all flex flex-col justify-between gap-2.5 group"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <NotificationSeverityBadge severity={n.severity} />
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
+                          {n.title}
+                        </p>
+                        <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+                          {n.message}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] text-[10.5px]">
+                        <span className="text-slate-400 font-mono">{n.serviceName || "Infrastructure"}</span>
+                        <div className="flex items-center gap-1">
+                          {n.deliveries?.slice(0, 3).map((d) => (
+                            <ChannelBadge key={d.channelType} type={d.channelType} />
+                          ))}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

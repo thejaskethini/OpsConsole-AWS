@@ -17,6 +17,7 @@ import {
   analyzeSchedule,
   analyzeDependencies,
   analyzeProjectRisk,
+  calculateRiskSeverity,
   type ProjectRiskInput,
 } from "../src/modules/projects";
 
@@ -162,6 +163,57 @@ describe("ASPM projects domain", () => {
     assert.strictEqual(evidence.OBSERVED?.source, "OBSERVED");
     assert.strictEqual(evidence.CALCULATED?.source, "CALCULATED");
     assert.strictEqual(evidence.INFERRED?.source, "INFERRED");
+  });
+
+  it("should persist scoped project, work item, milestone, and risk mutations", async () => {
+    const project = await repo.getProjectById(TEST_WS, TEST_ENV, "proj-payments-modernization");
+    assert.ok(project);
+    const createdProject = await repo.createProject(TEST_WS, TEST_ENV, {
+      ...project!,
+      id: "proj-test-created",
+      name: "Test Delivery Project",
+      milestones: [],
+      workItems: [],
+      risks: [],
+    });
+    assert.strictEqual((await repo.getProjectById(TEST_WS, TEST_ENV, createdProject.id))?.name, "Test Delivery Project");
+
+    const workItem = await repo.createWorkItem(TEST_WS, TEST_ENV, createdProject.id, {
+      id: "wi-test-created", projectId: createdProject.id, title: "Test work", description: "Controlled mutation", owner: "owner", priority: "HIGH", status: "TODO", estimate: 4, dependencyIds: [], riskIds: [],
+    });
+    assert.strictEqual((await repo.updateWorkItem(TEST_WS, TEST_ENV, workItem.id, { status: "IN_PROGRESS" }))?.status, "IN_PROGRESS");
+
+    const milestone = await repo.createMilestone(TEST_WS, TEST_ENV, createdProject.id, {
+      id: "milestone-test-created", projectId: createdProject.id, name: "Test checkpoint", description: "Controlled checkpoint", owner: "owner", status: "PLANNED", plannedDate: "2026-12-01T00:00:00.000Z",
+    });
+    assert.strictEqual((await repo.updateMilestone(TEST_WS, TEST_ENV, milestone.id, { status: "COMPLETED" }))?.status, "COMPLETED");
+
+    const risk = await repo.createRisk(TEST_WS, TEST_ENV, {
+      id: "risk-test-created", projectId: createdProject.id, workspaceId: TEST_WS, environmentId: TEST_ENV, description: "Test risk", probability: 0.8, impact: 0.9, severity: calculateRiskSeverity(0.8, 0.9), owner: "owner", mitigation: "Review", status: "OPEN", source: "PROJECT", createdAt: "2026-09-17T00:00:00.000Z",
+    });
+    assert.strictEqual((await repo.updateRisk(TEST_WS, TEST_ENV, risk.id, { status: "CLOSED" }))?.status, "CLOSED");
+    assert.strictEqual((await repo.getProjectById(TEST_WS, TEST_ENV, createdProject.id))?.workItems[0].status, "IN_PROGRESS");
+  });
+
+  it("should calculate risk severity and financial edge cases deterministically", () => {
+    assert.strictEqual(calculateRiskSeverity(0, 1), "LOW");
+    assert.strictEqual(calculateRiskSeverity(0.8, 0.9), "CRITICAL");
+    assert.strictEqual(calculateROI({ initialInvestment: 100, netProfit: 50 }), -50);
+    assert.strictEqual(calculateROI({ initialInvestment: 100, netProfit: 150 }), 50);
+    assert.throws(() => calculateROI({ initialInvestment: 0, netProfit: 10 }), /greater than zero/);
+    assert.strictEqual(calculateNPV({ initialInvestment: 0, cashFlows: [100], discountRate: 0.1 }), 90.91);
+    assert.throws(() => calculateNPV({ initialInvestment: -1, cashFlows: [100], discountRate: 0.1 }), /must not be negative/);
+  });
+
+  it("should preserve real seeded incident linkage and deterministic external references", async () => {
+    const project = await repo.getProjectById(TEST_WS, TEST_ENV, "proj-payments-modernization");
+    assert.ok(project?.linkedIncidentIds.includes("inc-0003"));
+    const jira = new SimulationJiraProvider();
+    const first = await jira.createWorkItem({ title: "A", description: "A" });
+    const second = await jira.createWorkItem({ title: "B", description: "B" });
+    assert.match(first.externalId, /^JIRA-SIM-\d{3}$/);
+    assert.match(second.externalId, /^JIRA-SIM-\d{3}$/);
+    assert.notStrictEqual(first.externalId, second.externalId);
   });
 
   it("should expose tool functions for project intelligence", async () => {

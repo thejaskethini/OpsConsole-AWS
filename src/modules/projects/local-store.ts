@@ -50,12 +50,12 @@ function cloneProjectForWorkspace(project: Project, workspaceId: string, environ
 
 const baseWorkItems: Record<string, WorkItem[]> = {
   "proj-payments-modernization": [
-    { id: "wi-payments-01", projectId: "proj-payments-modernization", title: "API contract review", description: "Approve the payment contract revisions and API compatibility plan.", owner: "platform-lead", priority: "HIGH", status: "IN_PROGRESS", estimate: 12, dueDate: "2026-09-20T00:00:00.000Z", dependencyIds: [], riskIds: ["risk-payments-01"], linkedIncidentId: "inc-001" },
-    { id: "wi-payments-02", projectId: "proj-payments-modernization", title: "Payment gateway migration", description: "Complete the gateway migration with phased rollout and rollback checkpoints.", owner: "payments-engineer", priority: "CRITICAL", status: "BLOCKED", estimate: 22, dueDate: "2026-09-25T00:00:00.000Z", milestoneId: "milestone-payments-02", dependencyIds: ["dep-payments-01"], riskIds: ["risk-payments-02"], linkedIncidentId: "inc-001" },
+    { id: "wi-payments-01", projectId: "proj-payments-modernization", title: "API contract review", description: "Approve the payment contract revisions and API compatibility plan.", owner: "platform-lead", priority: "HIGH", status: "IN_PROGRESS", estimate: 12, dueDate: "2026-09-20T00:00:00.000Z", dependencyIds: [], riskIds: ["risk-payments-01"], linkedIncidentId: "inc-0003" },
+    { id: "wi-payments-02", projectId: "proj-payments-modernization", title: "Payment gateway migration", description: "Complete the gateway migration with phased rollout and rollback checkpoints.", owner: "payments-engineer", priority: "CRITICAL", status: "BLOCKED", estimate: 22, dueDate: "2026-09-25T00:00:00.000Z", milestoneId: "milestone-payments-02", dependencyIds: ["dep-payments-01"], riskIds: ["risk-payments-02"], linkedIncidentId: "inc-0003" },
     { id: "wi-payments-03", projectId: "proj-payments-modernization", title: "Regression test suite", description: "Run card processing regression tests and validate failure paths.", owner: "qa-lead", priority: "HIGH", status: "TODO", estimate: 10, dueDate: "2026-09-30T00:00:00.000Z", dependencyIds: ["dep-payments-01"], riskIds: [], linkedIncidentId: undefined },
   ],
   "proj-notification-platform": [
-    { id: "wi-notify-01", projectId: "proj-notification-platform", title: "Workflow routing refactor", description: "Refactor routing to support channel policy versioning.", owner: "notification-lead", priority: "MEDIUM", status: "IN_PROGRESS", estimate: 16, dueDate: "2026-09-18T00:00:00.000Z", dependencyIds: [], riskIds: ["risk-notify-01"], linkedIncidentId: "inc-002" },
+    { id: "wi-notify-01", projectId: "proj-notification-platform", title: "Workflow routing refactor", description: "Refactor routing to support channel policy versioning.", owner: "notification-lead", priority: "MEDIUM", status: "IN_PROGRESS", estimate: 16, dueDate: "2026-09-18T00:00:00.000Z", dependencyIds: [], riskIds: ["risk-notify-01"], linkedIncidentId: "inc-0001" },
     { id: "wi-notify-02", projectId: "proj-notification-platform", title: "Deliverability audit", description: "Audit bounce and retry handling across all channels.", owner: "ops-engineer", priority: "MEDIUM", status: "TODO", estimate: 8, dueDate: "2026-09-22T00:00:00.000Z", dependencyIds: [], riskIds: [], linkedIncidentId: undefined },
   ],
   "proj-cost-optimization": [
@@ -88,7 +88,7 @@ const baseMilestones: Record<string, Milestone[]> = {
 
 const baseRisks: Record<string, Risk[]> = {
   "proj-payments-modernization": [
-    { id: "risk-payments-01", projectId: "proj-payments-modernization", workspaceId: DEFAULT_PROJECT_WORKSPACE_ID, environmentId: DEFAULT_PROJECT_ENVIRONMENT_ID, description: "Gateway migration may introduce payment latency spikes during rollback validation.", probability: 0.72, impact: 0.81, severity: "CRITICAL", owner: "director-platform", mitigation: "Use phased canaries and rollback checkpoints before full cutover.", status: "MITIGATING", source: "INCIDENT", linkedIncidentId: "inc-001", createdAt: "2026-09-05T00:00:00.000Z" },
+    { id: "risk-payments-01", projectId: "proj-payments-modernization", workspaceId: DEFAULT_PROJECT_WORKSPACE_ID, environmentId: DEFAULT_PROJECT_ENVIRONMENT_ID, description: "Gateway migration may introduce payment latency spikes during rollback validation.", probability: 0.72, impact: 0.81, severity: "CRITICAL", owner: "director-platform", mitigation: "Use phased canaries and rollback checkpoints before full cutover.", status: "MITIGATING", source: "INCIDENT", linkedIncidentId: "inc-0003", createdAt: "2026-09-05T00:00:00.000Z" },
     { id: "risk-payments-02", projectId: "proj-payments-modernization", workspaceId: DEFAULT_PROJECT_WORKSPACE_ID, environmentId: DEFAULT_PROJECT_ENVIRONMENT_ID, description: "Regression coverage may not cover enterprise card routing edge cases.", probability: 0.53, impact: 0.66, severity: "HIGH", owner: "qa-lead", mitigation: "Increase test coverage for cross-region and retry flows.", status: "OPEN", source: "PROJECT", createdAt: "2026-09-09T00:00:00.000Z" },
   ],
   "proj-notification-platform": [
@@ -128,10 +128,10 @@ export const SEEDED_PROJECTS: Project[] = [
     risks: baseRisks["proj-payments-modernization"],
     linkedOperationalEntities: [
       { type: "SERVICE", id: "srv-payment-gateway", label: "Payment Gateway" },
-      { type: "INCIDENT", id: "inc-001", label: "Payments degradation incident" },
+      { type: "INCIDENT", id: "inc-0003", label: "Payment Gateway webhook timeout" },
       { type: "ALERT", id: "alert-001", label: "SEV1 payment latency" },
     ],
-    linkedIncidentIds: ["inc-001"],
+    linkedIncidentIds: ["inc-0003"],
     createdAt: "2026-08-01T00:00:00.000Z",
     updatedAt: "2026-09-12T00:00:00.000Z",
     isSimulated: true,
@@ -156,7 +156,7 @@ export const SEEDED_PROJECTS: Project[] = [
       { type: "SERVICE", id: "srv-notification-worker", label: "Notification Worker" },
       { type: "ALERT", id: "alert-002", label: "Notification throughput alert" },
     ],
-    linkedIncidentIds: ["inc-002"],
+    linkedIncidentIds: ["inc-0001"],
     createdAt: "2026-08-10T00:00:00.000Z",
     updatedAt: "2026-09-11T00:00:00.000Z",
     isSimulated: true,
@@ -242,13 +242,18 @@ export class LocalProjectStore {
   }
 
   saveProject(project: Project): Project {
+    const storedProject = {
+      ...structuredClone(project),
+      workspaceId: normalizeWorkspaceId(project.workspaceId),
+      environmentId: normalizeEnvironmentId(project.environmentId),
+    };
     const existingIndex = this.projects.findIndex((item) => item.id === project.id);
     if (existingIndex >= 0) {
-      this.projects[existingIndex] = structuredClone(project);
-      return structuredClone(project);
+      this.projects[existingIndex] = storedProject;
+      return structuredClone(storedProject);
     }
-    this.projects.push(structuredClone(project));
-    return structuredClone(project);
+    this.projects.push(storedProject);
+    return structuredClone(storedProject);
   }
 
   upsertRisk(projectId: string, risk: Risk): Risk {

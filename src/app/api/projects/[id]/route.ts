@@ -8,7 +8,7 @@ import { type NextRequest } from "next/server";
 import { verifySession, COOKIE_NAME } from "@/lib/session";
 import { apiError, apiSuccess } from "@/lib/api";
 import { DEFAULT_USER_ID, can } from "@/modules/identity";
-import { getProjectRepository, DEFAULT_PROJECT_WORKSPACE_ID, DEFAULT_PROJECT_ENVIRONMENT_ID, ProjectHealthEngine, analyzeSchedule, analyzeProjectRisk } from "@/modules/projects";
+import { getProjectRepository, ProjectHealthEngine, analyzeSchedule, analyzeProjectRisk } from "@/modules/projects";
 
 export const runtime = "nodejs";
 
@@ -26,8 +26,9 @@ export async function GET(
   const { id } = await params;
   const userId = req.cookies.get(USER_COOKIE)?.value || DEFAULT_USER_ID;
   const { searchParams } = new URL(req.url);
-  const workspaceId = searchParams.get("workspaceId") || DEFAULT_PROJECT_WORKSPACE_ID;
-  const environmentId = searchParams.get("environmentId") || DEFAULT_PROJECT_ENVIRONMENT_ID;
+  const workspaceId = searchParams.get("workspaceId");
+  const environmentId = searchParams.get("environmentId");
+  if (!workspaceId || !environmentId) return apiError("workspaceId and environmentId are required", 400, "INVALID_SCOPE");
 
   const isAllowed = await can(userId, workspaceId, "projects:read");
   if (!isAllowed) {
@@ -60,5 +61,28 @@ export async function GET(
     });
   } catch (err) {
     return apiError("Failed to fetch project detail", 500, "PROJECT_DETAIL_ERROR", String(err));
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  if (!verifySession(token)) return apiError("Unauthorized", 401, "UNAUTHORIZED");
+  const userId = req.cookies.get(USER_COOKIE)?.value || DEFAULT_USER_ID;
+  const { id } = await params;
+  const body = await req.json();
+  const workspaceId = body.workspaceId;
+  const environmentId = body.environmentId;
+  if (!workspaceId || !environmentId) return apiError("workspaceId and environmentId are required", 400, "INVALID_SCOPE");
+  if (!(await can(userId, workspaceId, "projects:manage"))) return apiError("Forbidden: Project management permission required", 403, "FORBIDDEN");
+  const { workspaceId: _workspaceId, environmentId: _environmentId, ...patch } = body;
+  try {
+    const project = await getProjectRepository().updateProject(workspaceId, environmentId, id, patch);
+    if (!project) return apiError(`Project ${id} not found`, 404, "NOT_FOUND");
+    return apiSuccess({ project, isSimulated: true });
+  } catch (err) {
+    return apiError("Failed to update project", 500, "PROJECT_UPDATE_ERROR", String(err));
   }
 }

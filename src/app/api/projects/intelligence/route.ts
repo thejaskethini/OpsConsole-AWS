@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   if (!workspaceId || !environmentId) return apiError("workspaceId and environmentId are required", 400, "INVALID_SCOPE");
   const projectId = searchParams.get("projectId");
 
-  if (!(await can(userId, workspaceId, "projects:read"))) {
+  if (!(await can(userId, workspaceId, "projects:read")) || !(await can(userId, workspaceId, "intelligence:read"))) {
     return apiError("Forbidden: Insufficient permissions to view project intelligence", 403, "FORBIDDEN");
   }
 

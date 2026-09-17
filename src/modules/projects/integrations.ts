@@ -28,6 +28,13 @@ export interface AsanaProvider extends IntegrationProvider {
   provider: "ASANA";
 }
 
+let simulatedExternalSequence = 0;
+
+function nextSimulatedReference(provider: "JIRA" | "ASANA"): string {
+  simulatedExternalSequence += 1;
+  return `${provider === "JIRA" ? "JIRA" : "ASANA"}-SIM-${String(simulatedExternalSequence).padStart(3, "0")}`;
+}
+
 export class SimulationJiraProvider implements JiraProvider {
   provider = "JIRA" as const;
   name = "SIMULATED Jira";
@@ -47,15 +54,15 @@ export class SimulationJiraProvider implements JiraProvider {
     service?: string;
   }): Promise<ExternalWorkItem> {
     return {
-      id: `jira-${Date.now().toString(36)}`,
-      externalId: `JIRA-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+      id: `jira-sim-${simulatedExternalSequence + 1}`,
+      externalId: nextSimulatedReference("JIRA"),
       provider: "JIRA",
       title: input.title,
       description: input.description,
       status: "OPEN",
       url: "https://simulated.example.com/jira/issue",
       isSimulated: true,
-      createdAt: new Date().toISOString(),
+      createdAt: "2026-09-17T00:00:00.000Z",
     };
   }
 }
@@ -79,15 +86,15 @@ export class SimulationAsanaProvider implements AsanaProvider {
     service?: string;
   }): Promise<ExternalWorkItem> {
     return {
-      id: `asana-${Date.now().toString(36)}`,
-      externalId: `ASANA-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+      id: `asana-sim-${simulatedExternalSequence + 1}`,
+      externalId: nextSimulatedReference("ASANA"),
       provider: "ASANA",
       title: input.title,
       description: input.description,
       status: "OPEN",
       url: "https://simulated.example.com/asana/task",
       isSimulated: true,
-      createdAt: new Date().toISOString(),
+      createdAt: "2026-09-17T00:00:00.000Z",
     };
   }
 }

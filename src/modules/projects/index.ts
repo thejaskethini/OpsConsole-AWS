@@ -5,6 +5,7 @@ export {
   ProjectEngine,
   ProjectHealthEngine,
   createProjectRiskFromIncident,
+  calculateRiskSeverity,
   getProjectRepository,
 } from "./engine";
 export {

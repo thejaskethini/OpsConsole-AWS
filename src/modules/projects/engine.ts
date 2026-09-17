@@ -137,8 +137,7 @@ export function createProjectRiskFromIncident({
   incident: { id: string; title: string; severity: string; summary?: string; workspaceId?: string; environmentId?: string };
   riskInput: ProjectRiskInput;
 }): Risk {
-  const combined = riskInput.probability * riskInput.impact;
-  const severity: Risk["severity"] = combined >= 0.7 ? "CRITICAL" : combined >= 0.5 ? "HIGH" : combined >= 0.3 ? "MEDIUM" : "LOW";
+  const severity = calculateRiskSeverity(riskInput.probability, riskInput.impact);
 
   return {
     id: `risk-${Date.now().toString(36)}`,
@@ -156,6 +155,11 @@ export function createProjectRiskFromIncident({
     linkedIncidentId: riskInput.linkedIncidentId || incident.id,
     createdAt: new Date().toISOString(),
   };
+}
+
+export function calculateRiskSeverity(probability: number, impact: number): Risk["severity"] {
+  const combined = Math.max(0, Math.min(1, probability)) * Math.max(0, Math.min(1, impact));
+  return combined >= 0.7 ? "CRITICAL" : combined >= 0.5 ? "HIGH" : combined >= 0.3 ? "MEDIUM" : "LOW";
 }
 
 export function analyzeProjectRisk(project: Project): { criticalRisks: number; highRisks: number; mediumRisks: number; lowRisks: number; unmitigatedRisks: number; risksWithoutOwners: number; prioritizedRisks: Array<{ id: string; description: string; severity: Risk["severity"]; probability: number; impact: number }> } {
@@ -190,6 +194,9 @@ export function analyzeProjectRisk(project: Project): { criticalRisks: number; h
 
 export type ProjectRepositoryFactory = () => ProjectRepository;
 
+let repositoryInstance: ProjectRepository | null = null;
+
 export function getProjectRepository(): ProjectRepository {
-  return new LocalProjectRepository();
+  if (!repositoryInstance) repositoryInstance = new LocalProjectRepository();
+  return repositoryInstance;
 }

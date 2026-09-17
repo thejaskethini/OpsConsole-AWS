@@ -14,6 +14,9 @@ import {
   ShieldAlert,
   Sparkles,
   Target,
+  Plus,
+  Pencil,
+  X,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatCard } from "@/components/common/StatCard";
@@ -33,7 +36,10 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editor, setEditor] = useState<Project | null | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
   const canRead = can("projects:read");
+  const canManage = can("projects:manage");
 
   const fetchProjects = useCallback(async () => {
     if (!workspace || !activeEnvironment) return;
@@ -96,6 +102,28 @@ export default function ProjectsPage() {
     linkedSlos: projects.reduce((count, project) => count + project.linkedOperationalEntities.filter((entity) => entity.type === "SLO").length, 0),
   }), [projects]);
 
+  async function saveProject(input: Record<string, string>) {
+    if (!workspace || !activeEnvironment) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const existing = editor && editor !== null ? editor : null;
+      const response = await fetch(existing ? `/api/projects/${existing.id}` : "/api/projects", {
+        method: existing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace.id, environmentId: activeEnvironment.id, ...input }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to save project");
+      setEditor(undefined);
+      await fetchProjects();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unable to save project");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!canRead) {
     return (
       <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-300">
@@ -117,6 +145,7 @@ export default function ProjectsPage() {
             Simulated ASPM
           </span>
         }
+        actions={canManage ? <button type="button" onClick={() => setEditor(null)} className="inline-flex items-center gap-2 rounded-lg bg-violet-500/15 px-3 py-2 text-xs font-semibold text-violet-200 border border-violet-500/30 hover:bg-violet-500/25"><Plus size={14} /> New Project</button> : undefined}
       />
 
       {loading && (
@@ -135,6 +164,7 @@ export default function ProjectsPage() {
 
       {!loading && !error && (
         <>
+          {editor !== undefined && <ProjectEditor project={editor} saving={saving} onCancel={() => setEditor(undefined)} onSave={saveProject} />}
           <div className="rounded-2xl surface-card p-4 border border-violet-500/20 bg-violet-500/5 text-sm text-violet-100 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-[10px] uppercase tracking-[0.18em] text-violet-200/80">Workspace context</div>
@@ -239,9 +269,10 @@ export default function ProjectsPage() {
                           <Clock3 size={14} className="text-amber-400" />
                           {project.milestones.length} milestones
                         </div>
-                        <Link href={`/projects/${project.id}`} className="text-violet-300 hover:text-violet-200 font-medium inline-flex items-center gap-1">
-                          Open <ArrowUpRight size={12} />
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          {canManage && <button type="button" onClick={() => setEditor(project)} className="text-slate-400 hover:text-violet-200 inline-flex items-center gap-1"><Pencil size={12} /> Edit</button>}
+                          <Link href={`/projects/${project.id}`} className="text-violet-300 hover:text-violet-200 font-medium inline-flex items-center gap-1">Open <ArrowUpRight size={12} /></Link>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -270,3 +301,11 @@ function SummaryPanel({ title, items }: { title: string; items: Array<[string, s
     </div>
   );
 }
+
+function ProjectEditor({ project, saving, onCancel, onSave }: { project: Project | null; saving: boolean; onCancel: () => void; onSave: (input: Record<string, string>) => Promise<void> }) {
+  const [form, setForm] = useState({ name: project?.name || "", description: project?.description || "", owner: project?.owner || "", priority: project?.priority || "MEDIUM", status: project?.status || "PLANNING", plannedStart: project?.plannedStart?.slice(0, 10) || "", plannedEnd: project?.plannedEnd?.slice(0, 10) || "" });
+  const update = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  return <form onSubmit={(event) => { event.preventDefault(); void onSave(form); }} className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-5 space-y-4"><div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-white">{project ? "Edit project" : "New project"}</h2><button type="button" onClick={onCancel} className="text-slate-400 hover:text-white"><X size={16} /></button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{(["name", "owner", "plannedStart", "plannedEnd"] as const).map((key) => <label key={key} className="text-[11px] uppercase tracking-wider text-slate-400">{key === "plannedStart" ? "Start date" : key === "plannedEnd" ? "Target date" : key}<input required={key !== "owner" || true} type={key.includes("Start") || key.includes("End") ? "date" : "text"} value={form[key]} onChange={(event) => update(key, event.target.value)} className="mt-1 w-full rounded-lg border border-white/[0.08] bg-[#0c1322] px-3 py-2 text-xs text-slate-200" /></label>)}</div><label className="block text-[11px] uppercase tracking-wider text-slate-400">Description<textarea value={form.description} onChange={(event) => update("description", event.target.value)} className="mt-1 min-h-20 w-full rounded-lg border border-white/[0.08] bg-[#0c1322] px-3 py-2 text-xs text-slate-200" /></label><div className="grid grid-cols-1 md:grid-cols-2 gap-3"><SelectField label="Priority" value={form.priority} options={["LOW", "MEDIUM", "HIGH", "CRITICAL"]} onChange={(value) => update("priority", value)} /><SelectField label="Status" value={form.status} options={["PLANNING", "ACTIVE", "ON_TRACK", "AT_RISK", "CRITICAL", "COMPLETED"]} onChange={(value) => update("status", value)} /></div><div className="flex justify-end gap-2"><button type="button" onClick={onCancel} className="rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-300">Cancel</button><button disabled={saving} type="submit" className="rounded-lg bg-violet-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{saving ? "Saving..." : "Save project"}</button></div></form>;
+}
+
+function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="text-[11px] uppercase tracking-wider text-slate-400">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-lg border border-white/[0.08] bg-[#0c1322] px-3 py-2 text-xs text-slate-200">{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }

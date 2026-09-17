@@ -3,7 +3,6 @@ import type {
   Risk,
   Milestone,
   WorkItem,
-  Dependency,
   Estimate,
 } from "./types";
 

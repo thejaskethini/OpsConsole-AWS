@@ -5,7 +5,7 @@ import type {
   Risk,
   ProjectRiskInput,
 } from "./types";
-import { type ProjectRepository } from "./repository";
+import { LocalProjectRepository, type ProjectRepository } from "./repository";
 
 function deriveScheduleSnapshot(project: Project) {
   const now = Date.now();

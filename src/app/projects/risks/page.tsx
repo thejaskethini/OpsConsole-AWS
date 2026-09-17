@@ -1,0 +1,35 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Loader2, ShieldAlert } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { useIdentity } from "@/components/identity/IdentityProvider";
+import type { Project, Risk } from "@/modules/projects";
+import { loadProjectPortfolio } from "@/app/projects/project-data";
+
+export default function ProjectRisksPage() {
+  const { workspace, activeEnvironment, can } = useIdentity();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => { if (!workspace || !activeEnvironment) return; loadProjectPortfolio(workspace.id, activeEnvironment.id).then((data) => setProjects(data.projects)).catch((err: unknown) => setError(err instanceof Error ? err.message : "Unable to load risks")).finally(() => setLoading(false)); }, [workspace, activeEnvironment]);
+  const risks = useMemo(() => projects.flatMap((project) => project.risks.map((risk) => ({ ...risk, projectName: project.name }))), [projects]);
+  async function createReviewedRisk(project: Project) {
+    const incidentId = project.linkedIncidentIds[0];
+    if (!incidentId || !workspace || !activeEnvironment || !window.confirm("Create a simulated project risk from this linked incident?")) return;
+    const response = await fetch("/api/projects/risks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id, environmentId: activeEnvironment.id, projectId: project.id, incidentId }) });
+    const data = await response.json();
+    setMessage(response.ok ? `Created ${data.risk.severity} incident-derived risk for ${project.name}.` : data.error || "Risk creation failed");
+    if (response.ok) loadProjectPortfolio(workspace.id, activeEnvironment.id).then((result) => setProjects(result.projects));
+  }
+  if (!can("projects:read")) return <PermissionNotice />;
+  return <div className="space-y-6"><PageHeader icon={ShieldAlert} title="Project Risks" subtitle="Explainable project risk posture with incident-derived context." iconColor="#fb7185" iconBgColor="rgba(251, 113, 133, 0.12)" />{loading && <LoadingState />}{error && <ErrorState message={error} />}{message && <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-200">{message}</div>}{!loading && !error && <><ScopeBanner workspaceName={workspace?.name} environmentName={activeEnvironment?.name} /><div className="grid grid-cols-2 md:grid-cols-5 gap-3">{["CRITICAL", "HIGH", "MEDIUM", "LOW", "OPEN"].map((severity) => <div key={severity} className="rounded-xl surface-card p-4"><div className="text-[10px] uppercase tracking-wider text-slate-400">{severity === "OPEN" ? "Open risks" : severity}</div><div className="mt-2 text-2xl font-bold text-white">{severity === "OPEN" ? risks.filter((risk) => risk.status !== "CLOSED").length : risks.filter((risk) => risk.severity === severity).length}</div></div>)}</div><div className="grid grid-cols-1 xl:grid-cols-2 gap-4">{risks.map((risk) => <RiskCard key={risk.id} risk={risk} projectName={risk.projectName} />)}</div><div className="space-y-3">{projects.filter((project) => project.linkedIncidentIds.length > 0).map((project) => <div key={project.id} className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-wrap items-center justify-between gap-3"><div><div className="text-[10px] uppercase tracking-wider text-amber-300">Human review action</div><div className="mt-1 text-sm text-white">Review incident impact for {project.name}</div><div className="mt-1 text-xs text-slate-400">Linked incident: {project.linkedIncidentIds[0]} · no automatic risk creation</div></div>{can("projects:manage") && <button onClick={() => createReviewedRisk(project)} className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-500/20">Review and create risk</button>}</div>)}</div>{risks.length === 0 && <EmptyState />}</>}</div>;
+}
+function RiskCard({ risk, projectName }: { risk: Risk & { projectName: string }; projectName: string }) { const score = risk.probability * risk.impact; return <div className="rounded-2xl surface-card p-5 border border-white/[0.06]"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] uppercase tracking-wider text-slate-400">{projectName}</div><h2 className="mt-2 text-sm font-semibold text-white">{risk.description}</h2></div><span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-200">{risk.severity}</span></div><div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs"><Info label="Probability" value={`${Math.round(risk.probability * 100)}%`} /><Info label="Impact" value={`${Math.round(risk.impact * 100)}%`} /><Info label="Owner" value={risk.owner} /><Info label="Status" value={risk.status} /></div><p className="mt-4 text-sm text-slate-300">{risk.mitigation}</p><div className="mt-4 border-t border-white/[0.06] pt-3 text-[11px] text-slate-400">Source: <span className={risk.source === "INCIDENT" ? "text-amber-300" : "text-cyan-300"}>{risk.source}</span> · Linked incident: {risk.linkedIncidentId || "None"} · Priority score: {score.toFixed(2)}</div></div>; }
+function Info({ label, value }: { label: string; value: string }) { return <div className="rounded-lg bg-white/[0.03] p-3"><div className="text-slate-500">{label}</div><div className="mt-1 font-semibold text-slate-200">{value}</div></div>; }
+function ScopeBanner({ workspaceName, environmentName }: { workspaceName?: string; environmentName?: string }) { return <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-100">Active scope: <span className="font-semibold">{workspaceName || "Workspace"}</span> / <span className="font-semibold">{environmentName || "Environment"}</span> · SIMULATED</div>; }
+function LoadingState() { return <div className="rounded-2xl surface-card p-12 flex justify-center gap-3 text-sm text-slate-400"><Loader2 size={18} className="animate-spin text-rose-400" /> Loading project risks...</div>; }
+function ErrorState({ message }: { message: string }) { return <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300 flex gap-2"><AlertTriangle size={16} />{message}</div>; }
+function EmptyState() { return <div className="rounded-2xl surface-card p-10 text-center text-sm text-slate-400">No risks found in the active scope.</div>; }
+function PermissionNotice() { return <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-sm text-rose-300">You do not have permission to view project risks.</div>; }

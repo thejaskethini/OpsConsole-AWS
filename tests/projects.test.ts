@@ -45,6 +45,15 @@ describe("ASPM projects domain", () => {
     assert.strictEqual(other.length, 0);
   });
 
+  it("should seed the active demo workspace and environment IDs with deterministic projects", async () => {
+    const list = await repo.listProjects("ws_demo_001", "env_prod_001");
+    assert.ok(list.length >= 2, "demo workspace should include seeded ASPM projects");
+    assert.ok(list.every((project) => project.workspaceId === "ws_demo_001"));
+    assert.ok(list.every((project) => project.environmentId === "env_prod_001"));
+    assert.ok(list.some((project) => project.id === "proj-payments-modernization"));
+    assert.ok(list.some((project) => project.id === "proj-notification-platform"));
+  });
+
   it("should calculate health metrics with explainable indicators", async () => {
     const projects = await repo.listProjects(TEST_WS, TEST_ENV);
     const summary = health.calculatePortfolioHealth(projects, {

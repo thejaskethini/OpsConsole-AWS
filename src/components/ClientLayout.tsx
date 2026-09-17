@@ -9,7 +9,8 @@ import {
   Loader2, GitBranch, Cpu, Radio, HardDrive, Layers,
   Wifi, BarChart2, FlaskConical, Users, Settings, Building2,
   Activity, Target, ServerCog, Bell, Cloud, ChevronLeft,
-  Sparkles, AlertOctagon, Flame, FolderKanban,
+  Sparkles, AlertOctagon, Flame, FolderKanban, ListTodo, Milestone,
+  ShieldAlert, Calculator, PlugZap,
 } from "lucide-react";
 import { RegionProvider, useRegion } from "@/components/RegionProvider";
 import { IdentityProvider } from "@/components/identity/IdentityProvider";
@@ -41,7 +42,16 @@ const homeNavItems: NavItemDef[] = [
 const observeNavItems: NavItemDef[] = [
   { href: "/services", icon: ServerCog, label: "Services" },
   { href: "/infrastructure", icon: Network, label: "Infrastructure" },
+];
+
+const projectManagementNavItems: NavItemDef[] = [
   { href: "/projects", icon: FolderKanban, label: "Projects" },
+  { href: "/projects/work-items", icon: ListTodo, label: "Work Items" },
+  { href: "/projects/milestones", icon: Milestone, label: "Milestones" },
+  { href: "/projects/risks", icon: ShieldAlert, label: "Risks" },
+  { href: "/projects/estimates", icon: Calculator, label: "Estimates" },
+  { href: "/projects/integrations", icon: PlugZap, label: "Integrations" },
+  { href: "/projects/intelligence", icon: Sparkles, label: "AI Project Manager" },
 ];
 
 const reliabilityNavItems: NavItemDef[] = [
@@ -593,7 +603,21 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
             <div className="h-px bg-white/[0.04]" />
 
-            {/* 3. RELIABILITY */}
+            {/* 3. PROJECT MANAGEMENT */}
+            <div>
+              {(!isCollapsed || mobileNavOpen) && (
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">
+                  Project Management
+                </p>
+              )}
+              {projectManagementNavItems.map((n) => (
+                <NavLink key={n.href} {...n} collapsed={isCollapsed && !mobileNavOpen} />
+              ))}
+            </div>
+
+            <div className="h-px bg-white/[0.04]" />
+
+            {/* 4. RELIABILITY */}
             <div>
               {(!isCollapsed || mobileNavOpen) && (
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1">

@@ -1,0 +1,19 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { CheckCircle2, GitBranch, Loader2, PlugZap } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { useIdentity } from "@/components/identity/IdentityProvider";
+
+interface IntegrationStatus { provider: "JIRA" | "ASANA"; name: string; status: string; isSimulated: boolean; lastSyncAt?: string }
+
+export default function ProjectIntegrationsPage() {
+  const { workspace, activeEnvironment, can } = useIdentity();
+  const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { if (!workspace || !activeEnvironment) return; const params = new URLSearchParams({ workspaceId: workspace.id, environmentId: activeEnvironment.id }); fetch(`/api/projects/integrations?${params.toString()}`).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || "Unable to load integrations"); setIntegrations(data.integrations || []); }).catch((err: unknown) => setError(err instanceof Error ? err.message : "Unable to load integrations")).finally(() => setLoading(false)); }, [workspace, activeEnvironment]);
+  if (!can("projects:read")) return <PermissionNotice />;
+  return <div className="space-y-6"><PageHeader icon={PlugZap} title="Project Integrations" subtitle="Controlled handoff points for simulated Jira and Asana workflows." iconColor="#a78bfa" iconBgColor="rgba(167, 139, 250, 0.12)" />{loading && <div className="rounded-2xl surface-card p-12 flex justify-center gap-3 text-sm text-slate-400"><Loader2 size={18} className="animate-spin text-violet-400" /> Loading provider state...</div>}{error && <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">{error}</div>}{!loading && !error && <><div className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-xs text-violet-100">Active scope: <span className="font-semibold">{workspace?.name}</span> / <span className="font-semibold">{activeEnvironment?.name}</span> · Provider state is simulated.</div><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{integrations.map((integration) => <div key={integration.provider} className="rounded-2xl surface-card p-5"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="rounded-lg bg-violet-500/10 p-2 text-violet-300">{integration.provider === "JIRA" ? <GitBranch size={20} /> : <CheckCircle2 size={20} />}</div><div><h2 className="font-semibold text-white">{integration.provider}</h2><p className="text-xs text-slate-400">{integration.name}</p></div></div><span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-200">{integration.status}</span></div><p className="mt-4 text-sm text-slate-300">No live connection or credentials are configured. External work creation remains simulated and requires explicit approval.</p></div>)}</div><div className="rounded-2xl surface-card p-5"><h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">Controlled workflow</h2><div className="mt-4 grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs text-slate-300">{["Incident", "OpsConsole review", "Human approval", "Jira/Asana work creation", "Engineering execution"].map((step, index) => <div key={step} className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3"><div className="text-[10px] text-violet-300">0{index + 1}</div><div className="mt-2 font-semibold">{step}</div></div>)}</div></div></>}</div>;
+}
+function PermissionNotice() { return <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-sm text-rose-300">You do not have permission to view project integrations.</div>; }

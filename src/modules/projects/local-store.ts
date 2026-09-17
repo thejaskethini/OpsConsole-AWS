@@ -6,9 +6,36 @@ import type {
   Estimate,
 } from "./types";
 
-export const DEFAULT_PROJECT_WORKSPACE_ID = "ws-demo";
-export const DEFAULT_PROJECT_ENVIRONMENT_ID = "env-prod";
-const PROJECT_WORKSPACE_ALIASES = new Set(["ws-demo", "ws-projects"]);
+export const DEFAULT_PROJECT_WORKSPACE_ID = "ws_demo_001";
+export const DEFAULT_PROJECT_ENVIRONMENT_ID = "env_prod_001";
+
+const PROJECT_WORKSPACE_ALIASES = new Map([
+  ["ws-demo", "ws_demo_001"],
+  ["ws-projects", "ws_demo_001"],
+  ["ws_demo_001", "ws_demo_001"],
+  ["ws-acme", "ws_acme_002"],
+  ["ws_acme_002", "ws_acme_002"],
+]);
+
+const PROJECT_ENVIRONMENT_ALIASES = new Map([
+  ["env-prod", "env_prod_001"],
+  ["env-prod-001", "env_prod_001"],
+  ["env_prod_001", "env_prod_001"],
+  ["env-stag", "env_stag_002"],
+  ["env-stag-002", "env_stag_002"],
+  ["env_stag_002", "env_stag_002"],
+  ["env-dev", "env_dev_003"],
+  ["env-dev-003", "env_dev_003"],
+  ["env_dev_003", "env_dev_003"],
+]);
+
+function normalizeWorkspaceId(workspaceId: string): string {
+  return PROJECT_WORKSPACE_ALIASES.get(workspaceId) ?? workspaceId;
+}
+
+function normalizeEnvironmentId(environmentId: string): string {
+  return PROJECT_ENVIRONMENT_ALIASES.get(environmentId) ?? environmentId;
+}
 
 function cloneProjectForWorkspace(project: Project, workspaceId: string, environmentId: string): Project {
   return {
@@ -198,15 +225,19 @@ export class LocalProjectStore {
   }
 
   getProjectById(workspaceId: string, environmentId: string, id: string): Project | null {
-    const normalizedWorkspaceId = PROJECT_WORKSPACE_ALIASES.has(workspaceId) ? DEFAULT_PROJECT_WORKSPACE_ID : workspaceId;
-    const project = this.projects.find((item) => item.id === id && item.workspaceId === normalizedWorkspaceId && item.environmentId === environmentId);
+    const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+    const normalizedEnvironmentId = normalizeEnvironmentId(environmentId);
+    const project = this.projects.find(
+      (item) => item.id === id && item.workspaceId === normalizedWorkspaceId && item.environmentId === normalizedEnvironmentId
+    );
     return project ? cloneProjectForWorkspace(project, workspaceId, environmentId) : null;
   }
 
   listProjects(workspaceId: string, environmentId: string): Project[] {
-    const normalizedWorkspaceId = PROJECT_WORKSPACE_ALIASES.has(workspaceId) ? DEFAULT_PROJECT_WORKSPACE_ID : workspaceId;
+    const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+    const normalizedEnvironmentId = normalizeEnvironmentId(environmentId);
     return this.projects
-      .filter((project) => project.workspaceId === normalizedWorkspaceId && project.environmentId === environmentId)
+      .filter((project) => project.workspaceId === normalizedWorkspaceId && project.environmentId === normalizedEnvironmentId)
       .map((project) => cloneProjectForWorkspace(project, workspaceId, environmentId));
   }
 

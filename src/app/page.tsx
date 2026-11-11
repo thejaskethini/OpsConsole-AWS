@@ -385,9 +385,16 @@ function TopCostDriversCard({
     );
   }
 
-  const topCategories = services.slice(0, 5);
+  const normalizedServices = services
+    .map((s) =>
+      typeof s === "string"
+        ? { service: s, total: 0 }
+        : { service: s?.service || "Unknown Service", total: Number(s?.total ?? 0) }
+    );
+  const topCategories = normalizedServices.slice(0, 5);
   const maxCategorySpend = Math.max(...topCategories.map((s) => s.total), 1);
-  const totalDenom = totalSpend > 0 ? totalSpend : services.reduce((acc, s) => acc + s.total, 0) || 1;
+  const totalDenom =
+    totalSpend > 0 ? totalSpend : normalizedServices.reduce((acc, s) => acc + s.total, 0) || 1;
 
   return (
     <div className="flex flex-col justify-between h-full space-y-4">

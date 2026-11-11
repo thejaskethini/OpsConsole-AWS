@@ -11,6 +11,15 @@ export async function GET(request: Request) {
 
     // Offline / Local Development Fallback
     if (!hasAwsCredentials()) {
+      const totalSpend = mockCostData.stats.totalSpend || 1;
+      const serviceData = mockCostData.daily.flatMap((d) =>
+        mockCostData.topServices.map((s) => ({
+          date: d.date,
+          service: s.service,
+          amount: Math.round((d.amount * (s.total / totalSpend)) * 100) / 100,
+        }))
+      );
+
       return NextResponse.json({
         overall: mockCostData.daily,
         stats: {
@@ -21,10 +30,14 @@ export async function GET(request: Request) {
           currentMonthDays: 10,
           currentMonthLabel: "March 2026",
         },
-        services: mockCostData.topServices.map((s) => s.service),
-        serviceData: mockCostData.topServices,
+        services: mockCostData.topServices,
+        serviceData,
         rdsBreakdown: mockCostData.rdsBreakdown,
-        availableMonths: ["2026-03", "2026-02", "2026-01"],
+        availableMonths: [
+          { value: "2026-03", label: "March 2026" },
+          { value: "2026-02", label: "February 2026" },
+          { value: "2026-01", label: "January 2026" },
+        ],
       });
     }
 

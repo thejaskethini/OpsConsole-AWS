@@ -15,16 +15,16 @@ export default function ALBDashboard() {
   useEffect(() => {
     fetch(`/api/alb?region=${region}`)
       .then(res => {
-         if(!res.ok) throw new Error("Failed to fetch ALB data");
-         return res.json();
+        if (!res.ok) throw new Error("Failed to fetch ALB data");
+        return res.json();
       })
       .then(d => {
-         setData(d);
-         setLoading(false);
+        setData(d);
+        setLoading(false);
       })
       .catch(e => {
-         setError(e.message);
-         setLoading(false);
+        setError(e.message);
+        setLoading(false);
       });
   }, [region]);
 

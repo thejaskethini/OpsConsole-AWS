@@ -285,7 +285,10 @@ export default function CostDashboard() {
 
   const serviceTotals: Record<string, number> = {};
   (data.services || []).forEach((s) => {
-    serviceTotals[s.service] = (serviceTotals[s.service] || 0) + s.total;
+    const serviceName = typeof s === "string" ? s : s?.service;
+    const total = typeof s === "string" ? 0 : Number(s?.total ?? 0);
+    if (!serviceName) return;
+    serviceTotals[serviceName] = (serviceTotals[serviceName] || 0) + total;
   });
   const topServices = Object.entries(serviceTotals)
     .map(([name, cost]) => ({ name, cost }))

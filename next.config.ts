@@ -24,25 +24,10 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // API routes — short server-side cache to prevent hammering AWS APIs
-        // 30 seconds: data feels live but avoids repeated identical calls
+        // Authenticated & dynamic API routes must never be cached publicly on the CDN
         source: "/api/:path*",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=30, stale-while-revalidate=60" },
-        ],
-      },
-      {
-        // Cost API — can cache a bit longer (billing data updates once/day)
-        source: "/api/cost",
-        headers: [
-          { key: "Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=600" },
-        ],
-      },
-      {
-        // Security API — slightly longer cache (groups don't change every second)
-        source: "/api/security",
-        headers: [
-          { key: "Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=300" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
         ],
       },
     ];

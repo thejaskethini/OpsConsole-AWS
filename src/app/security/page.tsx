@@ -233,15 +233,17 @@ export default function SecurityPage() {
                       <td className="px-4 py-3.5 text-xs text-slate-300 font-mono">{sg.VpcName || sg.VpcId || "—"}</td>
                       <td className="px-4 py-3.5">
                         <div className="flex flex-wrap gap-1.5">
-                          {(sg.OpenPorts as (number | null)[]).slice(0, 6).map((p, pi) => (
+                          {(sg.OpenPorts || []).slice(0, 6).map((p, pi) => (
                             <PortBadge key={pi} port={p} />
                           ))}
-                          {sg.OpenPorts.length > 6 && (
-                            <span className="text-[10px] text-slate-500">+{sg.OpenPorts.length - 6}</span>
+                          {(sg.OpenPorts || []).length > 6 && (
+                            <span className="text-[10px] text-slate-500">+{(sg.OpenPorts || []).length - 6}</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-300 font-mono">{sg.InboundRules}</td>
+                      <td className="px-4 py-3.5 text-xs text-slate-300 font-mono">
+                        {Array.isArray(sg.InboundRules) ? sg.InboundRules.length : sg.InboundRules}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

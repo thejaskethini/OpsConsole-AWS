@@ -29,9 +29,9 @@ function quickValidateToken(token: string | undefined): boolean {
   // Check the signature is a 64-char hex string (SHA-256 HMAC)
   if (!/^[0-9a-f]{64}$/i.test(sig)) return false;
 
-  // Check the token is not expired (8 hours)
+  // Check the token is not expired (8 hours), allowing minor distributed clock skew
   const age = Date.now() - timestamp;
-  return age >= 0 && age < COOKIE_MAX_AGE_MS;
+  return age >= -60_000 && age < COOKIE_MAX_AGE_MS;
 }
 
 // Routes that do NOT require authentication

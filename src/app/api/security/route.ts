@@ -58,56 +58,66 @@ export async function GET(request: Request) {
 
     // Offline / Local Development Fallback
     if (!hasAwsCredentials()) {
+      const mockSecurityGroups = [
+        {
+          GroupId: "sg-0123456789prod",
+          GroupName: "public-web-sg",
+          Description: "Security group for public Application Load Balancer",
+          VpcId: "vpc-0123456789abcdef0",
+          VpcName: "Production VPC",
+          OpenToInternet: true,
+          OpenPorts: [80, 443] as (number | null)[],
+          Severity: "HIGH" as const,
+          InboundRules: 2,
+        },
+        {
+          GroupId: "sg-0987654321db",
+          GroupName: "database-internal-sg",
+          Description: "Internal Postgres and Redis security group",
+          VpcId: "vpc-0123456789abcdef0",
+          VpcName: "Production VPC",
+          OpenToInternet: false,
+          OpenPorts: [] as (number | null)[],
+          Severity: "MEDIUM" as const,
+          InboundRules: 2,
+        },
+      ];
+      const mockHighPrivUsers = [
+        {
+          UserName: "admin-sre-lead",
+          UserId: "AIDA1234567890ABCDEF",
+          CreateDate: "2025-01-10T00:00:00.000Z",
+          PasswordLastUsed: "2026-03-10T09:00:00.000Z",
+          IsHighPriv: true,
+          TopSeverity: "ADMIN" as const,
+          Policies: [{ name: "AdministratorAccess", type: "managed" as const, severity: "ADMIN" as const }],
+        },
+      ];
+
       return NextResponse.json({
-        riskyGroups: [
+        securityGroups: mockSecurityGroups,
+        riskyGroups: mockSecurityGroups.filter((sg) => sg.OpenToInternet),
+        vpcs: [
           {
-            GroupId: "sg-0123456789prod",
-            GroupName: "public-web-sg",
-            Description: "Security group for public Application Load Balancer",
             VpcId: "vpc-0123456789abcdef0",
-            VpcName: "Production VPC",
-            Severity: "HIGH",
-            InboundRules: [
-              { Port: 80, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
-              { Port: 443, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
-            ],
+            CidrBlock: "10.0.0.0/16",
+            IsDefault: true,
+            State: "available",
+            Name: "Production VPC",
           },
         ],
-        enrichedSgs: [
-          {
-            GroupId: "sg-0123456789prod",
-            GroupName: "public-web-sg",
-            Description: "Security group for public Application Load Balancer",
-            VpcId: "vpc-0123456789abcdef0",
-            VpcName: "Production VPC",
-            Severity: "HIGH",
-            InboundRules: [
-              { Port: 80, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
-              { Port: 443, Protocol: "tcp", Cidr: "0.0.0.0/0", Severity: "HIGH" },
-            ],
-          },
-          {
-            GroupId: "sg-0987654321db",
-            GroupName: "database-internal-sg",
-            Description: "Internal Postgres and Redis security group",
-            VpcId: "vpc-0123456789abcdef0",
-            VpcName: "Production VPC",
-            Severity: "MEDIUM",
-            InboundRules: [],
-          },
-        ],
-        highPrivUsers: [
-          {
-            UserName: "admin-sre-lead",
-            UserId: "AIDA1234567890ABCDEF",
-            CreateDate: "2025-01-10T00:00:00.000Z",
-            PasswordLastUsed: "2026-03-10T09:00:00.000Z",
-            TopSeverity: "ADMIN",
-            Policies: [{ name: "AdministratorAccess", type: "managed", severity: "ADMIN" }],
-          },
-        ],
+        iamSummary: {
+          Users: 6,
+          Groups: 3,
+          Roles: 12,
+          Policies: 18,
+          MFADevices: 4,
+          AccountMFAEnabled: 1,
+        },
+        users: mockHighPrivUsers,
+        highPrivUsers: mockHighPrivUsers,
         summary: {
-          totalSGs: 8,
+          totalSGs: mockSecurityGroups.length,
           riskySGs: 1,
           criticalSGs: 0,
           highSGs: 1,

@@ -68,7 +68,7 @@ export default function ServiceCatalogPage() {
   const criticalCount = services.filter((s) => s.service.status === "CRITICAL").length;
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-16">
+    <div className="flex flex-col gap-6 w-full pb-16">
       {/* ── Page Header ──────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-white/[0.04]">
         <div>
@@ -111,11 +111,10 @@ export default function ServiceCatalogPage() {
               <button
                 key={tier}
                 onClick={() => setSelectedTier(tier)}
-                className={`px-2.5 py-1 rounded-lg font-medium transition-all duration-150 ${
-                  selectedTier === tier
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all duration-150 ${selectedTier === tier
                     ? "bg-cyan-500/20 text-cyan-300 shadow-sm"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 {tier === "all" ? "All Tiers" : tier.toUpperCase()}
               </button>
@@ -128,11 +127,10 @@ export default function ServiceCatalogPage() {
               <button
                 key={status}
                 onClick={() => setSelectedStatus(status)}
-                className={`px-2.5 py-1 rounded-lg font-medium transition-all duration-150 ${
-                  selectedStatus === status
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all duration-150 ${selectedStatus === status
                     ? "bg-cyan-500/20 text-cyan-300 shadow-sm"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 {status === "all" ? "All Status" : status}
               </button>
@@ -213,9 +211,8 @@ export default function ServiceCatalogPage() {
                         {primarySlo ? (
                           <div>
                             <span
-                              className={`font-mono-brand font-bold ${
-                                primarySlo.compliancePercent >= primarySlo.target ? "text-emerald-400" : "text-rose-400"
-                              }`}
+                              className={`font-mono-brand font-bold ${primarySlo.compliancePercent >= primarySlo.target ? "text-emerald-400" : "text-rose-400"
+                                }`}
                             >
                               {primarySlo.compliancePercent.toFixed(2)}%
                             </span>
@@ -239,8 +236,8 @@ export default function ServiceCatalogPage() {
                             sig.errorRatePercent >= 1.0
                               ? "text-rose-400 font-bold"
                               : sig.errorRatePercent > 0.1
-                              ? "text-amber-400 font-bold"
-                              : "text-emerald-400"
+                                ? "text-amber-400 font-bold"
+                                : "text-emerald-400"
                           }
                         >
                           {sig.errorRatePercent.toFixed(2)}%

@@ -87,7 +87,7 @@ export default function ServiceDetailPage({
 
   if (error || !data) {
     return (
-      <div className="max-w-4xl mx-auto py-12">
+      <div className="w-full py-12">
         <div className="rounded-2xl p-6 border border-rose-500/20 bg-rose-500/[0.04] text-rose-300 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <AlertTriangle size={18} className="text-rose-400" />
@@ -107,7 +107,7 @@ export default function ServiceDetailPage({
   const { service, goldenSignals, slos, health, dependencies, dependents } = data;
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-16">
+    <div className="flex flex-col gap-6 w-full pb-16">
       {/* ── Breadcrumb Header ────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/[0.04]">
         <Link

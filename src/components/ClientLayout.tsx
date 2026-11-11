@@ -491,7 +491,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <IdentityProvider>
-      <div className="flex min-h-screen bg-[#090d16] text-slate-200 overflow-x-hidden">
+      <div className="flex w-full h-screen bg-[#090d16] text-slate-200 overflow-hidden">
         {/* ── Mobile Backdrop Overlay ───────────────────────────── */}
         {mobileNavOpen && (
           <div
@@ -679,7 +679,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* ── Main Content Area (Fluid & Responsive) ──────────────── */}
         <div
-          className={`flex flex-col min-h-screen bg-[#090d16] w-full transition-all duration-200 ${
+          className={`flex flex-col flex-1 min-w-0 h-screen bg-[#090d16] w-full transition-all duration-200 ${
             isCollapsed ? "lg:pl-[68px]" : "lg:pl-[252px]"
           }`}
         >
@@ -724,9 +724,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Page Body Wrapper (Accommodates Desktop Sidebar Offset and Ultrawide Widths) */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#090d16] transition-all duration-200">
-            <div className="w-full mx-auto max-w-[2400px]">
+          {/* Page Body Wrapper */}
+          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#090d16] transition-all duration-200">
+            <div className="w-full">
               {children}
             </div>
           </main>

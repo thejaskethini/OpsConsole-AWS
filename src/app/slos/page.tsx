@@ -81,7 +81,7 @@ export default function SlosPage() {
       : 100;
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-16">
+    <div className="flex flex-col gap-6 w-full pb-16">
       {/* ── Page Header ──────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-white/[0.04]">
         <div>

@@ -169,7 +169,7 @@ export default function AlertDetailPage({
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 w-full">
       {/* ── Breadcrumb & Navigation ─────────────────────────────── */}
       <div className="flex items-center justify-between">
         <Link

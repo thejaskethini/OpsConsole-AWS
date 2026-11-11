@@ -52,7 +52,7 @@ export default function SreHealthPage() {
   }, [workspace?.id, activeEnvironment?.id]);
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto pb-16">
+    <div className="flex flex-col gap-8 w-full pb-16">
       {/* ── Page Header ──────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-white/[0.08]">
         <div>

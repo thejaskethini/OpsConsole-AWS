@@ -294,7 +294,7 @@ export default function IncidentsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-16">
+    <div className="flex flex-col gap-6 w-full pb-16">
       {/* ── Page Header ──────────────────────────────────────────── */}
       <PageHeader
         icon={AlertOctagon}

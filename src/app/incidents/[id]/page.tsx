@@ -433,7 +433,7 @@ export default function IncidentDetailPage({
 
   if (loading) {
     return (
-      <div className="w-full max-w-7xl mx-auto py-24 flex items-center justify-center gap-2 text-slate-400 text-xs">
+      <div className="w-full py-24 flex items-center justify-center gap-2 text-slate-400 text-xs">
         <Loader2 size={20} className="animate-spin text-cyan-400" />
         <span>Loading incident details & audit timeline…</span>
       </div>
@@ -442,7 +442,7 @@ export default function IncidentDetailPage({
 
   if (error || !incident) {
     return (
-      <div className="w-full max-w-7xl mx-auto py-12 flex flex-col gap-4">
+      <div className="w-full py-12 flex flex-col gap-4">
         <Link
           href="/incidents"
           className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white"
@@ -458,7 +458,7 @@ export default function IncidentDetailPage({
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-16">
+    <div className="flex flex-col gap-6 w-full pb-16">
       {/* ── Breadcrumb & Back Link ─────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <Link
